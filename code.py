@@ -1,3 +1,4 @@
+import threading
 from collections import defaultdict
 from pprint import pprint
 
@@ -5,9 +6,8 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 import yaml
+from flask import Flask
 
-from flask import Flask                                                         
-import threading
 
 def get_worldPos_from_aruco(tvec, dstl):
     extristics = np.matrix(
@@ -30,7 +30,7 @@ def get_worldPos_from_aruco(tvec, dstl):
 
 print(cv2.__version__)
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(2)
 cap.set(3, 640)
 cap.set(4, 480)
 # cap.set(5, 60)
@@ -61,22 +61,28 @@ r0 = None
 r2 = None
 r3 = None
 global real_world_pos
+global real_rotation
 real_world_pos = None
+real_rotation = None
 
-#--------------FLASKKKKKSKSKSKSKSKSK------------------------
+# --------------FLASKKKKKSKSKSKSKSKSK------------------------
 app = Flask(__name__)
-data = 'shit'
+data = "shit"
+
+
 @app.route("/")
 def main():
-    return np.array2string(real_world_pos)
+    return np.array2string(real_world_pos) + ":" + np.array2string(real_rotation)
+
 
 def flaskThread():
-    print('from new thread')
+    print("from new thread")
     app.run()
+
 
 t1 = threading.Thread(target=flaskThread)
 t1.start()
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 
 while True:
     # world plot
@@ -123,6 +129,7 @@ while True:
                             g = 0.95
                             rs[a][b] = rs[a][b] * (1 - g) + r[a][b] * g
                 r = rs
+                real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1]))
                 cam_pos, q = get_worldPos_from_aruco(tvecs[i], rs)
                 # rsave.append(rvecs[i][0])
                 # print(ids[i], worldPos)
@@ -167,6 +174,7 @@ while True:
                             g = 0.95
                             rs[a][b] = rs[a][b] * (1 - g) + r0[a][b] * g
                 r0 = rs
+                real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1]))
                 cam_pos, q = get_worldPos_from_aruco(tvecs[i], rs)
                 # rsave.append(rvecs[i][0])
                 # print(ids[i], worldPos)
@@ -211,6 +219,10 @@ while True:
                             g = 0.95
                             rs[a][b] = rs[a][b] * (1 - g) + r2[a][b] * g
                 r2 = rs
+                real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1])) - 90
+                real_rotation += (real_rotation < -180) * 360 - (
+                    real_rotation > 180
+                ) * 360
                 cam_pos, q = get_worldPos_from_aruco(tvecs[i], rs)
                 # rsave.append(rvecs[i][0])
                 # print(ids[i], worldPos)
@@ -256,6 +268,10 @@ while True:
                             g = 0.95
                             rs[a][b] = rs[a][b] * (1 - g) + r3[a][b] * g
                 r3 = rs
+                real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1])) - 90
+                real_rotation += (real_rotation < -180) * 360 - (
+                    real_rotation > 180
+                ) * 360
                 cam_pos, q = get_worldPos_from_aruco(tvecs[i], rs)
                 # rsave.append(rvecs[i][0])
                 # print(ids[i], worldPos)
@@ -282,7 +298,7 @@ while True:
                 real_world_pos = cam_pos
                 prev_t3 = tvecs[i][0]
                 prev_r3 = rvecs[i][0]
-        #print(real_world_pos)
+        # print(real_world_pos)
         cv2.imshow("Display", display)
         cv2.imshow("Plot", plot)
     else:
