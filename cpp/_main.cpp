@@ -1,4 +1,5 @@
 
+
 #include <stdio.h>
 #include <iostream>
 #include <string.h>
@@ -10,6 +11,12 @@
 
 #include "cv.h"
 #include "highgui.h"
+
+
+#include <cpprest/http_client.h>
+#include <cpprest/filestream.h>
+#include <locale>         // std::wstring_convert
+#include <codecvt>        // std::codecvt_utf8
 
 // #include "Mode/ModeClass.h"
 
@@ -24,10 +31,23 @@ using namespace std;
 using namespace std::chrono;
 using namespace cv;
 
+using namespace utility;
+using namespace web;
+using namespace web::http;
+using namespace web::http::client;
+using namespace concurrency::streams;
+
 #define Create_Comport "COM3"
-#define M_PI 3.14159265358979323846 /* pi */
+#define M_PI 3.14159265358979323846 
 bool isRecord = false;
 unsigned int modeType = MODE_LINE;
+
+// http client
+http_client http_c(U("http://localhost:5000"));
+
+// string converter
+typedef std::codecvt_utf8<wchar_t> ccvt;
+std::wstring_convert<ccvt> wstr_convert;
 
 //Mode *mode = nullptr;
 
@@ -104,10 +124,42 @@ double perimeter(vector<pair<double, double>> pos, double posX0, double posY0)
 	return sum;
 }
 
+
+
+string get_stringData() {
+	// Create http_client to send the request.
+	http_response res = http_c.request(methods::GET).get();
+	std::wstring res_wstr = res.extract_string().get();
+	std::string res_str = wstr_convert.to_bytes(res_wstr);
+
+	return res_str;
+}
+
+typedef struct RobotState {
+	double position[3] = { 0.0f, 0.0f, 0.0f };
+	double orientation = 0.0f;
+} RobotState;
+
+void get_RobotState(RobotState* robotState, string stringData) {
+	sscanf(stringData.c_str(), "%lf,%lf,%lf,%lf", &robotState->position[0], 
+												  &robotState->position[1], 
+											      &robotState->position[2], 
+											      &robotState->orientation);
+}
+
+
 int main()
 {
 	cout << "Main : Started" << endl;
 
+	auto stringData = get_stringData();
+	RobotState robotState;
+	get_RobotState(&robotState, stringData);
+	std::cout << robotState.position[0] << " " 
+			  << robotState.position[1] << " " 
+			  << robotState.position[2] << " " 
+			  << robotState.orientation << std::endl;
+	/*
 	int width = 400, height = 400;
 	IplImage* img = cvCreateImage(cvSize(width, height), 8, 3);
 	CreateData robotData;
@@ -168,5 +220,6 @@ int main()
 	robot.Disconnect();
 	cout << "Robot : Disconnected !" << endl;
 	cvWaitKey(0);
+	*/
 	return 0;
 }
