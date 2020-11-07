@@ -6,7 +6,7 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 import yaml
-from flask import Flask
+from flask import Flask, jsonify
 
 
 def get_worldPos_from_aruco(tvec, dstl):
@@ -72,7 +72,13 @@ data = "shit"
 
 @app.route("/")
 def main():
-    return np.array2string(real_world_pos) + ":" + np.array2string(real_rotation)
+    # return jsonify( \
+    #     x = real_world_pos[0], \
+    #     y = real_world_pos[1], \
+    #     z = real_world_pos[2], \
+    #     r = real_rotation, \
+    # )
+    return str(real_world_pos[0])  + "," + str(real_world_pos[1])  + ","+ str(real_world_pos[2])  + "," + np.array2string(real_rotation)
 
 
 def flaskThread():
