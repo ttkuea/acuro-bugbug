@@ -30,7 +30,7 @@ def get_worldPos_from_aruco(tvec, dstl):
 
 print(cv2.__version__)
 
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(0)
 cap.set(3, 640)
 cap.set(4, 480)
 # cap.set(5, 60)
