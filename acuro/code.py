@@ -1,4 +1,6 @@
+import math
 import threading
+import time
 from collections import defaultdict
 from pprint import pprint
 
@@ -7,6 +9,8 @@ import cv2.aruco as aruco
 import numpy as np
 import yaml
 from flask import Flask, jsonify
+
+from robot import Robot
 
 
 def get_worldPos_from_aruco(tvec, dstl):
@@ -30,7 +34,7 @@ def get_worldPos_from_aruco(tvec, dstl):
 
 print(cv2.__version__)
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(2)
 cap.set(3, 640)
 cap.set(4, 480)
 # cap.set(5, 60)
@@ -62,7 +66,7 @@ r2 = None
 r3 = None
 global real_world_pos
 global real_rotation
-real_world_pos = [0,0,0]
+real_world_pos = [0, 0, 0]
 real_rotation = None
 
 # --------------FLASKKKKKSKSKSKSKSKSK------------------------
@@ -81,13 +85,53 @@ real_rotation = None
 #     return str(real_world_pos[0])  + "," + str(real_world_pos[1])  + ","+ str(real_world_pos[2])  + "," + np.array2string(real_rotation)
 
 
-# def flaskThread():
-#     print("from new thread")
-#     app.run()
+def flaskThread():
+
+    rob = Robot()
+
+    target = [0.0, 0.0]
+    state = 0
+    while True:
+        if state == 0:
+            while True:
+                nowrotate = 360 - ((real_rotation + 630) % 360)
+                diffx = target[0] - real_world_pos[0]
+                diffy = target[1] - real_world_pos[1]
+                atandeg = np.degrees(np.arctan2(diffy, diffx))
+                degreediff = (atandeg - nowrotate + 360) % 360
+                print(degreediff, atandeg, nowrotate)
+                if abs(nowrotate - atandeg) <= 10:
+                    state = 1
+                    rob.drivedirect(0, 0)
+                    break
+                if degreediff > 180:
+                    rob.drivedirect(-50, 50)
+                else:
+                    rob.drivedirect(50, -50)
+                time.sleep(0.5)
+                rob.drivedirect(0, 0)
+                time.sleep(1)
+        if state == 1:
+            while True:
+                nowrotate = 360 - ((real_rotation + 630) % 360)
+                diffx = target[0] - real_world_pos[0]
+                diffy = target[1] - real_world_pos[1]
+                dis = math.sqrt(diffx * diffx + diffy * diffy)
+                atandeg = np.degrees(np.arctan2(diffy, diffx))
+                print(dis)
+                if abs(nowrotate - atandeg) > 5:
+                    state = 0
+                    rob.drivedirect(0, 0)
+                    break
+                rob.drivedirect(100, 100)
+                time.sleep(0.5)
+                rob.drivedirect(0, 0)
+                time.sleep(1)
+        time.sleep(0.1)
 
 
-# t1 = threading.Thread(target=flaskThread)
-# t1.start()
+t1 = threading.Thread(target=flaskThread)
+t1.start()
 # -----------------------------------------------------------
 
 while True:
@@ -114,7 +158,7 @@ while True:
         id2 = np.array([[0, 0, 0]])
         tmp = {}
 
-        tmp_real_world_pos = [0, 0, 0] # x,y,count
+        tmp_real_world_pos = [0, 0, 0]  # x,y,count
         for i in range(len(tvecs)):
             length_of_axis = 1
             if ids[i] == 1:
@@ -247,7 +291,7 @@ while True:
                 # if ids[i] == 0:
                 #     print(ids[i], worldPos)
                 cam_pos[0], cam_pos[1] = -cam_pos[1], cam_pos[0]
-                cam_pos[0] += -1.934 -0.05
+                cam_pos[0] += -1.934 - 0.05
                 cam_pos[1] += 1.887 - 0.14
                 # print(ids[i], tvecs[i], rvecs[i], cam_pos)
                 if q:
@@ -300,7 +344,7 @@ while True:
                 # if ids[i] == 0:
                 #     print(ids[i], worldPos)
                 cam_pos[0], cam_pos[1] = -cam_pos[1], cam_pos[0]
-                cam_pos[0] += 1.916 -0.07
+                cam_pos[0] += 1.916 - 0.07
                 cam_pos[1] += 1.252 + 0.09
                 # print(ids[i], tvecs[i], rvecs[i], cam_pos)
                 if q:
@@ -325,18 +369,19 @@ while True:
                 # print(ids[i],real_world_pos)
         # print(real_world_pos)
         # lung for leaw na
-        if (tmp_real_world_pos[2] > 0):
-            real_world_pos[0] = tmp_real_world_pos[0]/tmp_real_world_pos[2]
-            real_world_pos[1] = tmp_real_world_pos[1]/tmp_real_world_pos[2]
-        print(real_world_pos)
-        plot = cv2.circle(plot,
-                        (
-                            320 + int(real_world_pos[0] * 40),
-                            240 + int(real_world_pos[1] * 40),
-                        ),
-                        1,
-                        (255, 255, 255),
-                        -1,)
+        if tmp_real_world_pos[2] > 0:
+            real_world_pos[0] = tmp_real_world_pos[0] / tmp_real_world_pos[2]
+            real_world_pos[1] = tmp_real_world_pos[1] / tmp_real_world_pos[2]
+        plot = cv2.circle(
+            plot,
+            (
+                320 + int(real_world_pos[0] * 40),
+                240 + int(real_world_pos[1] * 40),
+            ),
+            1,
+            (255, 255, 255),
+            -1,
+        )
 
         cv2.imshow("Display", display)
         cv2.imshow("Plot", plot)
@@ -352,8 +397,6 @@ rsave = np.array(rsave)
 t1.join()
 
 import matplotlib.pyplot as plt
-
-print(rsave[0])
 
 # plt.scatter(rsave[:, 0], rsave[:, 1], c="r")
 # plt.scatter(rsave[:, 0], rsave[:, 2], c="b")
