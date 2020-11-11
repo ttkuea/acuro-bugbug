@@ -62,32 +62,32 @@ r2 = None
 r3 = None
 global real_world_pos
 global real_rotation
-real_world_pos = None
+real_world_pos = [0,0,0]
 real_rotation = None
 
 # --------------FLASKKKKKSKSKSKSKSKSK------------------------
-app = Flask(__name__)
-data = "shit"
+# app = Flask(__name__)
+# data = "shit"
 
 
-@app.route("/")
-def main():
-    # return jsonify( \
-    #     x = real_world_pos[0], \
-    #     y = real_world_pos[1], \
-    #     z = real_world_pos[2], \
-    #     r = real_rotation, \
-    # )
-    return str(real_world_pos[0])  + "," + str(real_world_pos[1])  + ","+ str(real_world_pos[2])  + "," + np.array2string(real_rotation)
+# @app.route("/")
+# def main():
+#     # return jsonify( \
+#     #     x = real_world_pos[0], \
+#     #     y = real_world_pos[1], \
+#     #     z = real_world_pos[2], \
+#     #     r = real_rotation, \
+#     # )
+#     return str(real_world_pos[0])  + "," + str(real_world_pos[1])  + ","+ str(real_world_pos[2])  + "," + np.array2string(real_rotation)
 
 
-def flaskThread():
-    print("from new thread")
-    app.run()
+# def flaskThread():
+#     print("from new thread")
+#     app.run()
 
 
-t1 = threading.Thread(target=flaskThread)
-t1.start()
+# t1 = threading.Thread(target=flaskThread)
+# t1.start()
 # -----------------------------------------------------------
 
 while True:
@@ -113,6 +113,8 @@ while True:
         id1 = np.array([[0, 0, 0]])
         id2 = np.array([[0, 0, 0]])
         tmp = {}
+
+        tmp_real_world_pos = [0, 0, 0] # x,y,count
         for i in range(len(tvecs)):
             length_of_axis = 1
             if ids[i] == 1:
@@ -156,7 +158,11 @@ while True:
                         1,
                     )
                     rsave.append(rs)
-                real_world_pos = cam_pos
+                # real_world_pos = cam_pos
+                tmp_real_world_pos[0] += cam_pos[0]
+                tmp_real_world_pos[1] += cam_pos[1]
+                tmp_real_world_pos[2] += 1
+                # print(ids[i],real_world_pos)
 
                 prev_t = tvecs[i][0]
                 prev_r = rvecs[i][0]
@@ -188,8 +194,8 @@ while True:
                 # print(tmp)
                 # if ids[i] == 0:
                 #     print(ids[i], worldPos)
-                cam_pos[0] += 1.63
-                cam_pos[1] += -1.815
+                cam_pos[0] += 1.63 + 0.46
+                cam_pos[1] += -1.815 + 0.08
                 # print(ids[i], tvecs[i], rvecs[i], cam_pos)
                 if q:
                     plot = cv2.circle(
@@ -203,7 +209,11 @@ while True:
                         1,
                     )
                     rsave.append(rs)
-                real_world_pos = cam_pos
+                # real_world_pos = cam_pos
+                tmp_real_world_pos[0] += cam_pos[0]
+                tmp_real_world_pos[1] += cam_pos[1]
+                tmp_real_world_pos[2] += 1
+                # print(ids[i],real_world_pos)
                 prev_t0 = tvecs[i][0]
                 prev_r0 = rvecs[i][0]
             elif ids[i] == 2:
@@ -237,8 +247,8 @@ while True:
                 # if ids[i] == 0:
                 #     print(ids[i], worldPos)
                 cam_pos[0], cam_pos[1] = -cam_pos[1], cam_pos[0]
-                cam_pos[0] += -1.934
-                cam_pos[1] += 1.887
+                cam_pos[0] += -1.934 -0.05
+                cam_pos[1] += 1.887 - 0.14
                 # print(ids[i], tvecs[i], rvecs[i], cam_pos)
                 if q:
                     plot = cv2.circle(
@@ -252,7 +262,11 @@ while True:
                         1,
                     )
                     rsave.append(rs)
-                real_world_pos = cam_pos
+                # real_world_pos = cam_pos
+                tmp_real_world_pos[0] += cam_pos[0]
+                tmp_real_world_pos[1] += cam_pos[1]
+                tmp_real_world_pos[2] += 1
+                # print(ids[i],real_world_pos)
                 prev_t2 = tvecs[i][0]
                 prev_r2 = rvecs[i][0]
             elif ids[i] == 3:
@@ -286,8 +300,8 @@ while True:
                 # if ids[i] == 0:
                 #     print(ids[i], worldPos)
                 cam_pos[0], cam_pos[1] = -cam_pos[1], cam_pos[0]
-                cam_pos[0] += 1.916
-                cam_pos[1] += 1.252
+                cam_pos[0] += 1.916 -0.07
+                cam_pos[1] += 1.252 + 0.09
                 # print(ids[i], tvecs[i], rvecs[i], cam_pos)
                 if q:
                     plot = cv2.circle(
@@ -301,10 +315,29 @@ while True:
                         1,
                     )
                     rsave.append(rs)
-                real_world_pos = cam_pos
+                # real_world_pos = cam_pos
+                tmp_real_world_pos[0] += cam_pos[0]
+                tmp_real_world_pos[1] += cam_pos[1]
+                tmp_real_world_pos[2] += 1
+
                 prev_t3 = tvecs[i][0]
                 prev_r3 = rvecs[i][0]
+                # print(ids[i],real_world_pos)
         # print(real_world_pos)
+        # lung for leaw na
+        if (tmp_real_world_pos[2] > 0):
+            real_world_pos[0] = tmp_real_world_pos[0]/tmp_real_world_pos[2]
+            real_world_pos[1] = tmp_real_world_pos[1]/tmp_real_world_pos[2]
+        print(real_world_pos)
+        plot = cv2.circle(plot,
+                        (
+                            320 + int(real_world_pos[0] * 40),
+                            240 + int(real_world_pos[1] * 40),
+                        ),
+                        1,
+                        (255, 255, 255),
+                        -1,)
+
         cv2.imshow("Display", display)
         cv2.imshow("Plot", plot)
     else:
