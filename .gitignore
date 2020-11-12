@@ -1,5 +1,7 @@
 /images
 
+.vscode/
+
 *.mp4
 
 # Byte-compiled / optimized / DLL files
