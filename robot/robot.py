@@ -24,7 +24,7 @@ class Robot:
 
     def __init__(self):
         # Open new connection (NOTE, change port)
-        self.ser = serial.Serial("/dev/ttyUSB0", baudrate=57600, timeout=0.5)
+        self.ser = serial.Serial("COM3", baudrate=57600, timeout=0.5)
 
         # Actuator Commands
         # Send "Start" Opcode to start Open Interface, Roomba in Passive Mode
