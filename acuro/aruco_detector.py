@@ -80,7 +80,7 @@ class ArucoDetector:
                     self.readys = [False] * aruco_max_number
 
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    gray = cv2.GaussianBlur(gray, (3, 3), 5)
+                    # gray = cv2.GaussianBlur(gray, (3, 3), 5)
                     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
                     arucoParameters = aruco.DetectorParameters_create()
                     corners, ids, rejectedImgPoints = aruco.detectMarkers(
