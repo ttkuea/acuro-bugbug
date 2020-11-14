@@ -47,7 +47,7 @@ class ArucoDetector:
 
         self.tvecs = [np.array([[0, 0, 0]])] * aruco_max_number
         self.rvecs = [np.array([[0, 0, 0]])] * aruco_max_number
-        self.ready = [0] * aruco_max_number
+        self.readys = [False] * aruco_max_number
 
         self.size_of_marker = 0.3
 
@@ -63,7 +63,7 @@ class ArucoDetector:
         return self.image
 
     def getVectors(self):
-        return self.tvecs, self.rvecs, self.ready
+        return self.tvecs, self.rvecs, self.readys
 
     def run(self):
         while self.is_running:
@@ -77,9 +77,10 @@ class ArucoDetector:
                 frame = self.input_function()
 
                 if frame is not None:
-                    self.ready = [0] * aruco_max_number
+                    self.readys = [False] * aruco_max_number
 
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    gray = cv2.GaussianBlur(gray, (3, 3), 5)
                     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
                     arucoParameters = aruco.DetectorParameters_create()
                     corners, ids, rejectedImgPoints = aruco.detectMarkers(
@@ -93,7 +94,7 @@ class ArucoDetector:
                         )
 
                         for i, idx in enumerate(ids.flatten()):
-                            self.ready[idx] = 1
+                            self.readys[idx] = True
                             self.tvecs[idx] = tvecs[i]
                             self.rvecs[idx] = rvecs[i]
                     
