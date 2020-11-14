@@ -100,7 +100,7 @@ class ArucoDetector:
                         self.last_update = now
                 self.image = frame
                         
-            time.sleep(0.01)
+            time.sleep(0.001)
 
     def start(self):
         if not self.is_running:

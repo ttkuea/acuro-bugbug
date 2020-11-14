@@ -5,11 +5,10 @@ from threading import Thread
 
 
 class Video:
-    def __init__(self, input=0):
+    def __init__(self, input=0, fps=60):
         self.cap = cv2.VideoCapture(input)
-        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        if self.fps == 0:
-            self.fps = 60
+        # self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.fps = fps
         self.image = None
 
         self.thread = None
@@ -33,7 +32,7 @@ class Video:
                     self.image = image
                     self.last_update = now
             
-            time.sleep(0.01)
+            time.sleep(0.001)
         self.cap.release()
 
     def start(self):

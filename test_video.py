@@ -5,14 +5,14 @@ from acuro.aruco_detector import ArucoDetector
 from acuro.aruco_display import ArucoDisplay
 
 
-video = Video('outpy_part1.mp4')
+video = Video('outpy_part1.mp4', fps=1000)
 video.start()
 
-aruco1 = ArucoDetector()
+aruco1 = ArucoDetector(delay=0.001)
 aruco1.bindInput(video.getImage)
 aruco1.start()
 
-aruco2 = ArucoDisplay(aruco1.mtx, aruco1.dist)
+aruco2 = ArucoDisplay(aruco1.mtx, aruco1.dist, delay=0.001)
 aruco2.bindIput(aruco1.getImage, aruco1.getVectors)
 aruco2.start()
 
