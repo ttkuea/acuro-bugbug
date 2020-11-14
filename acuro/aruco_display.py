@@ -51,7 +51,7 @@ class ArucoDisplay:
                         tvec = tvecs[i]
                         rvec = rvecs[i]
 
-                        if ready == 1:
+                        if ready:
                             frame = aruco.drawAxis(
                                 frame, self.mtx, self.dist, rvec, tvec, self.length_of_axis
                             )
