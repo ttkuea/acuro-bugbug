@@ -30,6 +30,7 @@ class Robot:
         # Send "Start" Opcode to start Open Interface, Roomba in Passive Mode
         self.ser.write(bytes([128]))
         self.ser.write(bytes([129, 10]))
+        
         # Send "Safe Mode" Opcode to enable Roomba to respond to commands
         self.ser.write(bytes([131]))
         time.sleep(0.6)
@@ -113,6 +114,8 @@ while True:
     
     rob.drivedirect(x,y)
     c = b'p'
+
+    
     
     # roawaqb.drivedirect(0,0)
         
