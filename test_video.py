@@ -4,23 +4,31 @@ import numpy as np
 from acuro.video import Video
 from acuro.aruco_detector import ArucoDetector
 from acuro.aruco_display import ArucoDisplay
+from acuro.aruco_particle_filter import ArucoParticleFilter
 from acuro.aruco_estimator import ArucoEstimator
 
 
-video = Video('outpy_part1.mp4', fps=1000)
+delay = 0.001
+
+# video = Video(input=0, fps=1000)
+video = Video(input='outpy_part1.mp4', fps=100)
 video.start()
 
-aruco1 = ArucoDetector(delay=0.001)
-aruco1.bindInput(video.getImage)
-aruco1.start()
+detector = ArucoDetector(delay=delay / 10)
+detector.bindInput(video.getImage)
+detector.start()
 
-aruco2 = ArucoDisplay(aruco1.mtx, aruco1.dist, delay=0.001)
-aruco2.bindIput(aruco1.getImage, aruco1.getVectors)
-aruco2.start()
+particleFilter = ArucoParticleFilter(n_frame=10, delay=delay)
+particleFilter.bindInput(detector.getVectors)
+particleFilter.start()
 
-aruco3 = ArucoEstimator(delay=0.001)
-aruco3.bindInput(aruco1.getVectors)
-aruco3.setOffsets(
+display = ArucoDisplay(detector.mtx, detector.dist, delay=delay)
+display.bindIput(detector.getImage, detector.getVectors)
+display.start()
+
+estimator = ArucoEstimator(delay=delay)
+estimator.bindInput(detector.getVectors)
+estimator.setOffsets(
     [
         np.array([1.63 + 0.46, -1.815 + 0.08]),
         np.array([0.0, 0.0]),
@@ -29,42 +37,92 @@ aruco3.setOffsets(
     ], 
     [ 0.0, 0.0, -90.0,-90.0]
 )
-aruco3.start()
+estimator.start()
+
+colors = [
+    (255, 255, 255),
+    (0, 0, 255),
+    (255, 255, 0),
+    (255, 0, 255),
+]
 
 window_name1 = 'Video'
 window_name2 = 'Estimation'
+window_name3 = 'Samples 01'
+window_name4 = 'Samples 12'
 cv2.namedWindow(window_name1)
+cv2.namedWindow(window_name2)
+cv2.namedWindow(window_name3)
 
-while True:
-    image = aruco2.getImage()
-    plot = np.zeros((480, 640, 3), np.uint8)
-    plot = cv2.circle(plot, (320, 240), 5, (0, 255, 0), 1)
+try:
+    while True:
+        image = display.getImage()
+        plot = np.zeros((480, 640, 3), np.uint8)
+        plot = cv2.circle(plot, (320, 240), 5, (0, 255, 0), 1)
+        plot2 = np.zeros((480, 480, 3), np.uint8)
+        plot3 = np.zeros((480, 480, 3), np.uint8)
 
-    pos, rot, readys = aruco3.getEstimation()
-    for p, _, rd in zip(pos, rot, readys):
-        if rd:
-            plot = cv2.circle(
-                plot,
-                (
-                    320 + int(p[0] * 40),
-                    240 + int(p[1] * 40),
-                ),
-                5,
-                (0, 0, 255),
-                1,
-            )
+        # ts, rs, rds = detector.getVectors()
+        # for r, rd in zip(rs, rds):
+        #     if rd:
+        #         print(r)
+        #         break
+    
+        pos, rot, readys = estimator.getEstimation()
+        for i in range(len(readys)):
+            if readys[i]:
+                plot = cv2.circle(
+                    plot,
+                    (
+                        320 + int(pos[i][0] * 40),
+                        240 + int(pos[i][1] * 40),
+                    ),
+                    5,
+                    colors[i],
+                    1,
+                )
 
-    if image is not None:
-        # print(video.last_update, acuro.last_update)
-        cv2.imshow(window_name1, image)
+        samples, scores = particleFilter.getSamples()
+        for i in [1, 3]:
+            for j in range(samples.shape[1]):
+                plot2 = cv2.circle(
+                    plot2,
+                    (
+                        240 + int(samples[i][j][0] * 240 / np.pi),
+                        240 + int(samples[i][j][1] * 240 / np.pi),
+                    ),
+                    int(scores[i][j] * 1000),
+                    colors[i],
+                    -1,
+                    )
+                plot3 = cv2.circle(
+                    plot3,
+                    (
+                        240 + int(samples[i][j][1] * 240 / np.pi),
+                        240 + int(samples[i][j][2] * 240 / np.pi),
+                    ),
+                    int(scores[i][j] * 1000),
+                    colors[i],
+                    -1,
+                    )
 
-    cv2.imshow(window_name2, plot)
 
-    if cv2.waitKey(16) & 0xFF == ord('q'):
-        break
+        if image is not None:
+            # print(video.last_update, acuro.last_update)
+            cv2.imshow(window_name1, image)
+
+        cv2.imshow(window_name2, plot)
+        cv2.imshow(window_name3, plot2)
+        cv2.imshow(window_name4, plot3)
+
+        if cv2.waitKey(16) & 0xFF == ord('q'):
+            break
+except Exception as e:
+    print(e)
 
 video.stop()
-aruco1.stop()
-aruco2.stop()
-aruco3.stop()
+detector.stop()
+display.stop()
+particleFilter.stop()
+estimator.stop()
 cv2.destroyAllWindows()
