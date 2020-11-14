@@ -58,7 +58,6 @@ def stateAction(robot):
         robot.drivedirect(move_spd, move_spd)
 
     elif state == 3: # follow wall
-        print(substate)
         if substate == 0: # rotate 45 degree
             robot.drivedirect(-rot_spd, rot_spd)
             time.sleep(0.5)
