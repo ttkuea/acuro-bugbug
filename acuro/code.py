@@ -38,7 +38,7 @@ cap = cv2.VideoCapture(2)
 cap.set(3, 640)
 cap.set(4, 480)
 # cap.set(5, 60)
-with open("calibration_new.yaml") as f:
+with open("calibration_final.yaml") as f:
     loadeddict = yaml.load(f)
     mtx = loadeddict.get("camera_matrix")
     dist = loadeddict.get("dist_coeff")
@@ -140,12 +140,9 @@ while True:
     plot = cv2.circle(plot, (320, 240), 5, (0, 255, 0), 1)
 
     ret, frame = cap.read()
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
-    arucoParameters = aruco.DetectorParameters_create()
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(
-        gray, aruco_dict, parameters=arucoParameters
-    )
+    corners, ids, rejectedImgPoints = aruco.detectMarkers(frame, aruco_dict)
 
     if np.all(ids != None):
         display = aruco.drawDetectedMarkers(frame, corners)
@@ -160,7 +157,7 @@ while True:
 
         tmp_real_world_pos = [0, 0, 0]  # x,y,count
         for i in range(len(tvecs)):
-            length_of_axis = 1
+            length_of_axis = 0.3
             if ids[i] == 1:
 
                 if prev_t is not None:
