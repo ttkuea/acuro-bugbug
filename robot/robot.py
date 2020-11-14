@@ -1,94 +1,79 @@
-from threading import Thread
+import struct
+import time
+
+import serial
+
+
+class RobotData:
+    bumperR = 0
+    bumperL = 0
+    wheeldropR = 0
+    wheeldropL = 0
+    wheeldropCaster = 0
+    wall = 0
+    wallSignal = 0
+    cliff0 = 0
+    cliff1 = 0
+    cliff2 = 0
+    cliff3 = 0
+
 
 class Robot:
+    ser = None
+    data = RobotData()
 
     def __init__(self):
-        self.state = 0
-        self.state_desc = [
-            'init',
-            'request target',
-            'face target',
-            'drive to target',
-            'reach target'
-        ]
-        self.state_max = len(self.state_desc)
-        self.is_running = False
-        self.pos = [0, 0]
-        self.dst = None
-        self.dir = 0
+        # Open new connection (NOTE, change port)
+        self.ser = serial.Serial("/dev/ttyUSB0", baudrate=57600, timeout=0.5)
 
-        self.thread = None
+        # Actuator Commands
+        # Send "Start" Opcode to start Open Interface, Roomba in Passive Mode
+        self.ser.write(bytes([128]))
+        self.ser.write(bytes([129, 10]))
+        # Send "Safe Mode" Opcode to enable Roomba to respond to commands
+        self.ser.write(bytes([131]))
+        time.sleep(0.6)
 
-    def setup(self):
-        pass
+    def drivedirect(self, left, right):
+        m16l = struct.pack("h", left)
+        m16r = struct.pack("h", right)
+        self.ser.write(bytes([145, m16r[1], m16r[0], m16l[1], m16l[0]]))
 
-    def run(self):
-        
-        while self.is_running:
+    def readData(self):
+        data = RobotData()
+        self.ser.write(bytes([149, 7, 7, 8, 27, 28, 29, 30, 31]))
+        self.ser.in_waiting
 
-            # reads data
-            
-            # action
-            if self.state == 0:
-                print('ROB >> Initial State')
+        # Bump and Wheeldrop
+        tmp = self.ser.read(1)
+        number = int.from_bytes(tmp, byteorder="big", signed=False)
+        data.bumperR = number % 2
+        data.bumperL = (number // 2) % 2
+        data.wheeldropR = (number // 4) % 2
+        data.wheeldropL = (number // 8) % 2
+        data.wheeldropCaster = (number // 16) % 2
 
-            elif self.state == 1:
+        # Wall
+        tmp = self.ser.read(1)
+        number = int.from_bytes(tmp, byteorder="big", signed=False)
+        data.wall = number
 
-                while self.dst is None:
-                    try:
-                        cmd_input = input('BOT >> request target: ').strip()
-                        if cmd_input == 'exit':
-                            self.is_running = False
-                            break
-                        req_dst = [float(x) for x in cmd_input.split()]
-                        if len(req_dst) == 2:
-                            self.dst = req_dst
-                    except:
-                        print('BOT >> ERR: Invalid target!')
+        # Wall Signal
+        tmp = self.ser.read(2)
+        number = int.from_bytes(tmp, byteorder="big", signed=False)
+        data.wallSignal = number
 
-                if not self.is_running:
-                    break
-
-                print('BOT >> target =', self.dst)
-
-            elif self.state == 2:
-
-                pass
-
-            elif self.state == 3:
-
-                pass
-
-            elif self.state == 4:
-
-                pass
-
-
-            # sets speed
-
-            # changes state
-            if self.state == 0:
-                self.state = 1
-            elif self.state == 1:
-                pass
-            elif self.state == 2:
-                pass
-            elif self.state == 3:
-                pass
-            elif self.state == 4:
-                pass
-
-
-    def start(self):
-        print('BOT >> Robot start.')
-        if not self.is_running:
-            self.thread = Thread(target=self.run)
-            self.is_running = True
-            self.thread.start()
-        else:
-            print('BOT >> ERR: Attempt to start Robot while it\'s running!')
-
-    def stop(self):
-        print('BOT >> Attempt to stop Robot.')
-        self.is_running = False
-        print('BOT >> Robot stopped.')
+        # Cliffs
+        tmp = self.ser.read(2)
+        number = int.from_bytes(tmp, byteorder="big", signed=False)
+        data.cliff0 = number
+        tmp = self.ser.read(2)
+        number = int.from_bytes(tmp, byteorder="big", signed=False)
+        data.cliff1 = number
+        tmp = self.ser.read(2)
+        number = int.from_bytes(tmp, byteorder="big", signed=False)
+        data.cliff2 = number
+        tmp = self.ser.read(2)
+        number = int.from_bytes(tmp, byteorder="big", signed=False)
+        data.cliff3 = number
+        self.data = data
