@@ -66,11 +66,10 @@ def stateAction(robot):
                 break
 
     elif state == 1:  # align target
-        degreediff = is_allign(pos, dest, orient)[1]
-        if degreediff > 180:
-            robot.drivedirect(-rot_spd, rot_spd)
-        else:
-            robot.drivedirect(rot_spd, -rot_spd)
+        robot.drivedirect(rot_spd, -rot_spd)
+        time.sleep(0.2)
+        robot.drivedirect(0, 0)
+        time.sleep(1)
 
     elif state == 2:  # move forward
         robot.drivedirect(move_spd, move_spd)
@@ -103,9 +102,12 @@ def stateTransition(robot):
         state = 1
 
     elif state == 1:  # align target -> move forward
-        isAlg = is_allign(pos, dest, orient)[2]
-        if isAlg:
+        align_data = is_allign(pos, dest, orient)
+        atandeg = align_data[0]
+        nowRotate = align_data[1]
+        if abs(atandeg - nowRotate) < 10 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 10) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 10 ):
             state = 2
+
 
     elif state == 2:  # move forward -> follow wall, finish
         if robot.data.bumperL == 1 or robot.data.bumperR == 1:
@@ -135,12 +137,12 @@ def is_allign(pos, dest, orient):  # pos [x,y,r]
     nowrotate = 360 - ((orient + 630) % 360)
     diffx = dest[0] - pos[0]
     diffy = dest[1] - pos[1]
-    atandeg = np.degrees(np.arctan2(diffy, diffx))
+    atandeg = (np.degrees(np.arctan2(diffy, diffx)) + 360) % 360
     degreediff = (atandeg - nowrotate + 360) % 360
     print(degreediff, atandeg, nowrotate)
     return (
+        atandeg,
         nowrotate,
-        degreediff,
         abs(nowrotate - atandeg) <= 5,
     )  # (nowrotate, degreediff, is_allign)
 
@@ -160,6 +162,7 @@ def real_orient(orient):
 
 # --------------------------------------------------
 # Main loop
+cv2.namedWindow('plot')
 while is_running:
     # TODO: get new pos
     pos = [sta.getPosition()[0], sta.getPosition()[1]]
@@ -171,3 +174,7 @@ while is_running:
     stateAction(robot)
     # robot.data.bumperL
     stateTransition(robot)
+
+    cv2.imshow('plot', sta.getPlot())
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
