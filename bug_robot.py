@@ -108,7 +108,8 @@ def stateTransition(robot):
             state = 2
 
     elif state == 2:  # move forward -> follow wall, finish
-        if robot.data.bumperL == 1 or robot.data.bumperR == 1:
+        # if robot.data.bumperL == 1 or robot.data.bumperR == 1:
+        if robot.data.wallSignal > 25:
             state = 3
             substate_orient = orient
         # TODO: xxx
