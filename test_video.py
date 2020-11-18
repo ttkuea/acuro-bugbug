@@ -4,30 +4,36 @@ import numpy as np
 from acuro.video import Video
 from acuro.aruco_detector import ArucoDetector
 from acuro.aruco_display import ArucoDisplay
+from acuro.aruco_lpfilter import ArucoLPFilter
 from acuro.aruco_particle_filter import ArucoParticleFilter
 from acuro.aruco_estimator import ArucoEstimator
 
 
 delay = 0.001
 
-# video = Video(input=0, fps=1000)
-video = Video(input='outpy_part1.mp4', fps=100)
+video = Video(input=1, fps=1000)
+# video = Video(input='out/py_part1.mp4', fps=100)
 video.start()
 
-detector = ArucoDetector(delay=delay / 10)
+detector = ArucoDetector(delay=delay)
 detector.bindInput(video.getImage)
 detector.start()
 
-particleFilter = ArucoParticleFilter(n_frame=10, delay=delay)
-particleFilter.bindInput(detector.getVectors)
+lpFilter = ArucoLPFilter(delay=delay)
+lpFilter.bindInput(detector.getVectors)
+lpFilter.setConstant([-50, -50])
+lpFilter.start()
+
+particleFilter = ArucoParticleFilter(n_frame=5, delay=delay)
+particleFilter.bindInput(lpFilter.getVectors)
 particleFilter.start()
 
 display = ArucoDisplay(detector.mtx, detector.dist, delay=delay)
-display.bindIput(detector.getImage, detector.getVectors)
+display.bindIput(detector.getImage, lpFilter.getVectors)
 display.start()
 
 estimator = ArucoEstimator(delay=delay)
-estimator.bindInput(detector.getVectors)
+estimator.bindInput(lpFilter.getVectors)
 estimator.setOffsets(
     [
         np.array([1.63 + 0.46, -1.815 + 0.08]),
@@ -112,8 +118,7 @@ try:
             cv2.imshow(window_name1, image)
 
         cv2.imshow(window_name2, plot)
-        cv2.imshow(window_name3, plot2)
-        cv2.imshow(window_name4, plot3)
+        cv2.imshow(window_name3, np.concatenate((plot2, plot3), axis=1))
 
         if cv2.waitKey(16) & 0xFF == ord('q'):
             break
@@ -123,6 +128,7 @@ except Exception as e:
 video.stop()
 detector.stop()
 display.stop()
+lpFilter.stop()
 particleFilter.stop()
 estimator.stop()
 cv2.destroyAllWindows()
