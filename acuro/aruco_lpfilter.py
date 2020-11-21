@@ -57,9 +57,16 @@ class ArucoLPFilter:
                         br = np.exp(self.w[1] * (now - self.time[i]))
 
                     self.tvecs[i] = bt * self.tvecs[i] + (1 - bt) * tvec
-                    self.rvecs[i] = br * self.rvecs[i] + (1 - br) * rvec
+                    self.rvecs[i] = np.array([[
+                        np.arctan2(
+                            bt * np.sin(self.rvecs[i][0][j]) + (1 - bt) * np.sin(rvec[0][j]),
+                            bt * np.cos(self.rvecs[i][0][j]) + (1 - bt) * np.cos(rvec[0][j]),
+                        ) for j in range(3)
+                    ]])
                     self.time[i] = now
                     self.readys[i] = True
+
+                    # print(self.tvecs[i].shape, self.rvecs[i].shape)
 
     def run(self):
         # thread target
