@@ -9,8 +9,7 @@ import cv2.aruco as aruco
 import numpy as np
 import yaml
 from flask import Flask, jsonify
-
-from robot import Robot
+from robot.robot import Robot
 
 
 def get_worldPos_from_aruco(tvec, dstl):
