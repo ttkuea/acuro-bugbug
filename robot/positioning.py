@@ -49,7 +49,7 @@ def positionThread():
 
     print(cv2.__version__)
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
     cap.set(3, 1280)
     cap.set(4, 720)
     # cap.set(5, 60)
@@ -136,11 +136,11 @@ def positionThread():
                     if prev_t is not None:
                         for j in range(len(tvecs[i][0])):
                             tvecs[i][0][j] = bt * prev_t[j] + (1 - bt) * tvecs[i][0][j]
-                        for j in range(len(rvecs[i][0])):
-                            rvecs[i][0][j] = np.arctan2(
-                                br * np.sin(prev_r[j]) + (1 - br) * np.sin(rvecs[i][0][j]),
-                                br * np.cos(prev_r[j]) + (1 - br) * np.cos(rvecs[i][0][j])
-                            )
+                        # for j in range(len(rvecs[i][0])):
+                        #     rvecs[i][0][j] = np.arctan2(
+                        #         br * np.sin(prev_r[j]) + (1 - br) * np.sin(rvecs[i][0][j]),
+                        #         br * np.cos(prev_r[j]) + (1 - br) * np.cos(rvecs[i][0][j])
+                        #     )
                             
 
                     display = aruco.drawAxis(
@@ -148,11 +148,11 @@ def positionThread():
                     )
 
                     rs, _ = cv2.Rodrigues(rvecs[i])
-                    if r is not None:
-                        for a in range(r.shape[0]):
-                            for b in range(r.shape[1]):
-                                g = 0.95
-                                rs[a][b] = rs[a][b] * (1 - g) + r[a][b] * g
+                    # if r is not None:
+                    #     for a in range(r.shape[0]):
+                    #         for b in range(r.shape[1]):
+                    #             g = 0.95
+                    #             rs[a][b] = rs[a][b] * (1 - g) + r[a][b] * g
                     r = rs
                     real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1]))
                     real_rotation += (real_rotation < -180) * 360 - (
@@ -195,22 +195,22 @@ def positionThread():
                     if prev_t0 is not None:
                         for j in range(len(tvecs[i][0])):
                             tvecs[i][0][j] = bt * prev_t0[j] + (1 - bt) * tvecs[i][0][j]
-                        for j in range(len(rvecs[i][0])):
-                            rvecs[i][0][j] = np.arctan2(
-                                br * np.sin(prev_r0[j]) + (1 - br) * np.sin(rvecs[i][0][j]),
-                                br * np.cos(prev_r0[j]) + (1 - br) * np.cos(rvecs[i][0][j])
-                            )
+                        # for j in range(len(rvecs[i][0])):
+                        #     rvecs[i][0][j] = np.arctan2(
+                        #         br * np.sin(prev_r0[j]) + (1 - br) * np.sin(rvecs[i][0][j]),
+                        #         br * np.cos(prev_r0[j]) + (1 - br) * np.cos(rvecs[i][0][j])
+                        #     )
 
                     display = aruco.drawAxis(
                         display, mtx, dist, rvecs[i], tvecs[i], length_of_axis
                     )
 
                     rs, _ = cv2.Rodrigues(rvecs[i])
-                    if r0 is not None:
-                        for a in range(r0.shape[0]):
-                            for b in range(r0.shape[1]):
-                                g = 0.95
-                                rs[a][b] = rs[a][b] * (1 - g) + r0[a][b] * g
+                    # if r0 is not None:
+                    #     for a in range(r0.shape[0]):
+                    #         for b in range(r0.shape[1]):
+                    #             g = 0.95
+                    #             rs[a][b] = rs[a][b] * (1 - g) + r0[a][b] * g
                     r0 = rs
                     real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1]))
                     real_rotation += (real_rotation < -180) * 360 - (
@@ -254,22 +254,22 @@ def positionThread():
                     if prev_t2 is not None:
                         for j in range(len(tvecs[i][0])):
                             tvecs[i][0][j] = bt * prev_t2[j] + (1 - bt) * tvecs[i][0][j]
-                        for j in range(len(rvecs[i][0])):
-                            rvecs[i][0][j] = np.arctan2(
-                                br * np.sin(prev_r2[j]) + (1 - br) * np.sin(rvecs[i][0][j]),
-                                br * np.cos(prev_r2[j]) + (1 - br) * np.cos(rvecs[i][0][j])
-                            )
+                        # for j in range(len(rvecs[i][0])):
+                        #     rvecs[i][0][j] = np.arctan2(
+                        #         br * np.sin(prev_r2[j]) + (1 - br) * np.sin(rvecs[i][0][j]),
+                        #         br * np.cos(prev_r2[j]) + (1 - br) * np.cos(rvecs[i][0][j])
+                        #     )
 
                     display = aruco.drawAxis(
                         display, mtx, dist, rvecs[i], tvecs[i], length_of_axis
                     )
 
                     rs, _ = cv2.Rodrigues(rvecs[i])
-                    if r2 is not None:
-                        for a in range(r2.shape[0]):
-                            for b in range(r2.shape[1]):
-                                g = 0.95
-                                rs[a][b] = rs[a][b] * (1 - g) + r2[a][b] * g
+                    # if r2 is not None:
+                    #     for a in range(r2.shape[0]):
+                    #         for b in range(r2.shape[1]):
+                    #             g = 0.95
+                    #             rs[a][b] = rs[a][b] * (1 - g) + r2[a][b] * g
                     r2 = rs
                     real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1])) - 90
                     real_rotation += (real_rotation < -180) * 360 - (
@@ -313,21 +313,21 @@ def positionThread():
                     if prev_t3 is not None:
                         for j in range(len(tvecs[i][0])):
                             tvecs[i][0][j] = bt * prev_t3[j] + (1 - bt) * tvecs[i][0][j]
-                        for j in range(len(rvecs[i][0])):
-                            rvecs[i][0][j] = np.arctan2(
-                                br * np.sin(prev_r3[j]) + (1 - br) * np.sin(rvecs[i][0][j]),
-                                br * np.cos(prev_r3[j]) + (1 - br) * np.cos(rvecs[i][0][j])
-                            )
+                        # for j in range(len(rvecs[i][0])):
+                        #     rvecs[i][0][j] = np.arctan2(
+                        #         br * np.sin(prev_r3[j]) + (1 - br) * np.sin(rvecs[i][0][j]),
+                        #         br * np.cos(prev_r3[j]) + (1 - br) * np.cos(rvecs[i][0][j])
+                        #     )
 
                     display = aruco.drawAxis(
                         display, mtx, dist, rvecs[i], tvecs[i], length_of_axis
                     )
                     rs, _ = cv2.Rodrigues(rvecs[i])
-                    if r3 is not None:
-                        for a in range(r3.shape[0]):
-                            for b in range(r3.shape[1]):
-                                g = 0.95
-                                rs[a][b] = rs[a][b] * (1 - g) + r3[a][b] * g
+                    # if r3 is not None:
+                    #     for a in range(r3.shape[0]):
+                    #         for b in range(r3.shape[1]):
+                    #             g = 0.95
+                    #             rs[a][b] = rs[a][b] * (1 - g) + r3[a][b] * g
                     r3 = rs
                     real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1])) - 90
                     real_rotation += (real_rotation < -180) * 360 - (

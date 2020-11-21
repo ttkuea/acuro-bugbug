@@ -28,11 +28,14 @@ state_desc = [
 ]
 init_pos = None
 pos = [0, 0, 0]  # x, y, z
+curr_pos = [0,0]
 dest = None
 orient = 0  # Degree
 substate_orient = 0
 move_spd = 200
 rot_spd = 50
+
+mline_counter = 0
 
 atandeg=0
 
@@ -43,7 +46,7 @@ robot.drivedirect(0,0)
 def stateAction(robot):
     global is_running
     global state, substate
-    global init_pos, pos, dest, orient, substate_orient
+    global init_pos, pos, dest, orient, substate_orient, curr_pos
     global move_spd, rot_spd
 
     if state == 0:  # Set target
@@ -90,16 +93,19 @@ def stateAction(robot):
     elif state == 4:  # finish
         robot.drivedirect(0, 0)
         pass
-
+    
+    elif state == 5:
+        robot.drivedirect(rot_spd, -rot_spd)
 
 # --------------------------------------------------
 def stateTransition(robot):
     global is_running
     global state, substate
-    global init_pos, pos, dest, orient, substate_orient
+    global init_pos, pos, dest, orient, substate_orient, curr_pos
     global move_spd, rot_spd
     global treshold
     global atandeg
+    global mline_counter
 
     if state == 0:  # Set target -> align target
         state = 1
@@ -139,14 +145,19 @@ def stateTransition(robot):
         if (pos[0]*100 - dest[0]*100) ** 2 + (pos[1]*100 - dest[1]*100) ** 2 <= treshold ** 2:
             print('3 at target')
             state = 4
-        if is_on_mline(init_pos, pos, dest):
-            state = 1
+        if is_on_mline(init_pos, pos, dest) and mline_counter >= 10:
+            print("CHECK MLINE")
+            state = 5
+            mline_counter = 0
+            curr_pos = list(pos)
+        print(mline_counter)
 
         if substate == 0:
             substate = 1
         elif substate == 1:
             # if robot.data.wallSignal > 25:
             if robot.data.bumperL == 1 or robot.data.bumperR == 1:
+                mline_counter += 1
                 substate = 2
         elif substate == 2:
             substate = 1
@@ -154,6 +165,22 @@ def stateTransition(robot):
 
     elif state == 4:  # finish
         pass
+
+    elif state == 5: # rotate after mline
+        diffx = dest[0] - curr_pos[0]
+        diffy = dest[1] - curr_pos[1]
+        atandeg = (np.degrees(np.arctan2(diffy, diffx)) + 360) % 360
+        orient = sta.getRotation()
+        # nowRotate = 360 - ((orient + 360) % 360)
+        nowRotate = (orient + 360) % 360
+        print(nowRotate, atandeg)
+        while not(abs(atandeg - nowRotate) < 5 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5 )):
+            orient = sta.getRotation()
+            # nowRotate = 360 - ((orient + 360) % 360)
+            nowRotate = (orient + 360) % 360
+            print(nowRotate, atandeg)
+            time.sleep(0.010)
+        state = 2
 
 
 # --------------------------------------------------
@@ -175,7 +202,8 @@ def is_on_mline(init_pos, pos, dest):
     s = np.sqrt((init_pos[0] - dest[0]) ** 2 + (init_pos[1] - dest[1]) ** 2)
     d1 = np.sqrt((init_pos[0] - pos[0]) ** 2 + (init_pos[1] - pos[1]) ** 2)
     d2 = np.sqrt((pos[0] - dest[0]) ** 2 + (pos[1] - dest[1]) ** 2)
-    return d1 + d2 <= s
+    #print(d1+d2,s)
+    return d1 + d2 <= s + 0.01
 
 
 def real_orient(orient):
