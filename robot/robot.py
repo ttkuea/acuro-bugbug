@@ -24,14 +24,14 @@ class Robot:
 
     def __init__(self):
         # Open new connection (NOTE, change port)
-        self.ser = serial.Serial("COM3", baudrate=57600, timeout=0.5)
+        self.ser = serial.Serial("/dev/ttyUSB0", baudrate=57600, timeout=0.5)
 
         # Actuator Commands
         # Send "Start" Opcode to start Open Interface, Roomba in Passive Mode
         self.ser.write(bytes([128]))
         self.ser.write(bytes([129, 10]))
         # Send "Safe Mode" Opcode to enable Roomba to respond to commands
-        self.ser.write(bytes([131]))
+        self.ser.write(bytes([132]))
         time.sleep(0.6)
 
     def drivedirect(self, left, right):

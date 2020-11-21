@@ -32,9 +32,12 @@ dest = None
 orient = 0  # Degree
 substate_orient = 0
 move_spd = 200
-rot_spd = 100
+rot_spd = 50
 
-treshold = 0.0001
+atandeg=0
+
+treshold = 19
+robot.drivedirect(0,0)
 
 # --------------------------------------------------
 def stateAction(robot):
@@ -56,33 +59,32 @@ def stateAction(robot):
                     sta.getPosition()[0],
                     sta.getPosition()[1],
                 ]  # TODO: set dest position
+                sta.setTarget(dest)
                 print("Set target position: %f,%f" % (dest[0], dest[1]))
             elif tg == "s":
                 init_pos = [
                     sta.getPosition()[0],
                     sta.getPosition()[1],
                 ]  # TODO: set init position
+                sta.setStart(init_pos)
                 print("Set initial position: %f,%f" % (init_pos[0], init_pos[1]))
                 break
 
     elif state == 1:  # align target
         robot.drivedirect(rot_spd, -rot_spd)
-        time.sleep(0.2)
-        robot.drivedirect(0, 0)
-        time.sleep(1)
 
     elif state == 2:  # move forward
         robot.drivedirect(move_spd, move_spd)
 
     elif state == 3:  # follow wall
         if substate == 0:  # rotate 45 degree
-            robot.drivedirect(-rot_spd, rot_spd)
+            robot.drivedirect(-100, 100)
             time.sleep(0.5)
         elif substate == 1:
-            robot.drivedirect(move_spd, int(move_spd * 0.4))
-            time.sleep(1)
+            robot.drivedirect(100, int(100 * 0.3))
+            # time.sleep(1)
         elif substate == 2:
-            robot.drivedirect(-int(rot_spd * 0.8), int(rot_spd * 0.8))
+            robot.drivedirect(-int(100 * 0.8), int(100 * 0.8))
             time.sleep(0.5)
 
     elif state == 4:  # finish
@@ -97,37 +99,58 @@ def stateTransition(robot):
     global init_pos, pos, dest, orient, substate_orient
     global move_spd, rot_spd
     global treshold
+    global atandeg
 
     if state == 0:  # Set target -> align target
         state = 1
 
+
     elif state == 1:  # align target -> move forward
-        align_data = is_allign(pos, dest, orient)
-        atandeg = align_data[0]
-        nowRotate = align_data[1]
-        if abs(atandeg - nowRotate) < 10 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 10) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 10 ):
-            state = 2
+        diffx = dest[0] - init_pos[0]
+        diffy = dest[1] - init_pos[1]
+        atandeg = (np.degrees(np.arctan2(diffy, diffx)) + 360) % 360
+        orient = sta.getRotation()
+        # nowRotate = 360 - ((orient + 360) % 360)
+        nowRotate = (orient + 360) % 360
+        print(nowRotate, atandeg)
+        while not(abs(atandeg - nowRotate) < 5 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5 )):
+            orient = sta.getRotation()
+            # nowRotate = 360 - ((orient + 360) % 360)
+            nowRotate = (orient + 360) % 360
+            print(nowRotate, atandeg)
+            time.sleep(0.010)
+        state = 2
 
 
     elif state == 2:  # move forward -> follow wall, finish
-        # if robot.data.bumperL == 1 or robot.data.bumperR == 1:
-        if robot.data.wallSignal > 25:
+        if robot.data.bumperL == 1 or robot.data.bumperR == 1:
+        # if robot.data.wallSignal > 25:
             state = 3
             substate_orient = orient
         # TODO: xxx
-        if (pos[0] - dest[0]) ** 2 + (pos[1] - dest[1]) ** 2 <= treshold ** 2:
+
+        # print(pos,dest)
+        # print((pos[0]*100 - dest[0]*100) ** 2 + (pos[1] - dest[1]) ** 2, treshold ** 2)
+        if (pos[0]*100 - dest[0]*100) ** 2 + (pos[1]*100 - dest[1]*100) ** 2 <= treshold ** 2:
+            print('2 at target')
             state = 4
 
     elif state == 3:  # follow wall -> align target
+        if (pos[0]*100 - dest[0]*100) ** 2 + (pos[1]*100 - dest[1]*100) ** 2 <= treshold ** 2:
+            print('3 at target')
+            state = 4
+        if is_on_mline(init_pos, pos, dest):
+            state = 1
+
         if substate == 0:
             substate = 1
         elif substate == 1:
-            substate = 2
+            # if robot.data.wallSignal > 25:
+            if robot.data.bumperL == 1 or robot.data.bumperR == 1:
+                substate = 2
         elif substate == 2:
             substate = 1
         # TODO: edit m_line
-        if is_on_mline(init_pos, pos, dest):
-            state = 1
 
     elif state == 4:  # finish
         pass
