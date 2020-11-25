@@ -49,7 +49,7 @@ def positionThread():
 
     print(cv2.__version__)
 
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(0)
     cap.set(3, 1280)
     cap.set(4, 720)
     # cap.set(5, 60)
@@ -109,6 +109,19 @@ def positionThread():
             5,
             (0, 255, 0),
             -1,
+        )
+        plot = cv2.line(
+            plot,
+            (
+                320 + int(despoint[0] * 40),
+                240 + int(despoint[1] * 40),
+            ),
+            (
+                320 + int(startpoint[0] * 40),
+                240 + int(startpoint[1] * 40),
+            ),
+            (0, 255, 255),
+            1,
         )
 
         ret, frame = cap.read()

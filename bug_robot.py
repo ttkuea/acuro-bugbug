@@ -15,7 +15,7 @@ sta = GlobalData()
 #     cv2.waitKey(20)
 
 # Initialize
-robot = Robot()
+robot = Robot("COM3")
 is_running = True
 state = 0
 substate = 0  # substate for state 3 - follow wall
@@ -39,7 +39,7 @@ mline_counter = 0
 
 atandeg=0
 
-treshold = 19
+treshold = 21
 robot.drivedirect(0,0)
 
 # --------------------------------------------------
@@ -114,15 +114,17 @@ def stateTransition(robot):
     elif state == 1:  # align target -> move forward
         diffx = dest[0] - init_pos[0]
         diffy = dest[1] - init_pos[1]
-        atandeg = (np.degrees(np.arctan2(diffy, diffx)) + 360) % 360
+        print("Diff", diffx, diffy, np.degrees(np.arctan2(-diffx, -diffy)))
+        atandeg = (np.degrees(np.arctan2(-diffx, -diffy)) + 360) % 360
         orient = sta.getRotation()
         # nowRotate = 360 - ((orient + 360) % 360)
-        nowRotate = (orient + 360) % 360
-        print(nowRotate, atandeg)
+        nowRotate = (orient + 377) % 360
+        
+        print("loop", nowRotate, atandeg)
         while not(abs(atandeg - nowRotate) < 5 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5 )):
             orient = sta.getRotation()
             # nowRotate = 360 - ((orient + 360) % 360)
-            nowRotate = (orient + 360) % 360
+            nowRotate = (orient + 377) % 360
             print(nowRotate, atandeg)
             time.sleep(0.010)
         state = 2
@@ -167,17 +169,17 @@ def stateTransition(robot):
         pass
 
     elif state == 5: # rotate after mline
-        diffx = dest[0] - curr_pos[0]
-        diffy = dest[1] - curr_pos[1]
-        atandeg = (np.degrees(np.arctan2(diffy, diffx)) + 360) % 360
+        diffx = dest[0] - init_pos[0]
+        diffy = dest[1] - init_pos[1]
+        print("Diff", diffx, diffy, np.degrees(np.arctan2(-diffx, -diffy)))
+        atandeg = (np.degrees(np.arctan2(-diffx, -diffy)) + 360) % 360
         orient = sta.getRotation()
         # nowRotate = 360 - ((orient + 360) % 360)
-        nowRotate = (orient + 360) % 360
-        print(nowRotate, atandeg)
+        nowRotate = (orient + 377) % 360
         while not(abs(atandeg - nowRotate) < 5 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5 )):
             orient = sta.getRotation()
             # nowRotate = 360 - ((orient + 360) % 360)
-            nowRotate = (orient + 360) % 360
+            nowRotate = (orient + 377) % 360
             print(nowRotate, atandeg)
             time.sleep(0.010)
         state = 2
