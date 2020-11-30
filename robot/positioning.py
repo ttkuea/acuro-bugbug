@@ -18,6 +18,8 @@ despoint=[0,0]
 startpoint=[0,0]
 
 plot = np.zeros((480, 640, 3), np.uint8)
+final_plot = np.zeros((480, 640, 3), np.uint8)
+final_display = np.zeros((480, 640, 3), np.uint8)
 dis_threshold = 0.05
 
 def distance(x1,y1,x2,y2):
@@ -26,9 +28,9 @@ def distance(x1,y1,x2,y2):
 def get_worldPos_from_aruco(tvec, dstl):
     extristics = np.matrix(
         [
-            [dstl[0][0], dstl[0][1], dstl[0][2], tvec[0][0]],
-            [dstl[1][0], dstl[1][1], dstl[1][2], tvec[0][1]],
-            [dstl[2][0], dstl[2][1], dstl[2][2], tvec[0][2]],
+            [dstl[0][0], dstl[0][1], 0, tvec[0][0]],
+            [dstl[1][0], dstl[1][1], 0, tvec[0][1]],
+            [0, 0, 1, tvec[0][2]],
             [0.0, 0.0, 0.0, 1.0],
         ]
     )
@@ -45,11 +47,15 @@ def get_worldPos_from_aruco(tvec, dstl):
 def positionThread():
     global real_world_pos
     global real_rotation
-    global plot
+    global final_plot
+    global final_display
+
+    plot = np.zeros((480, 640, 3), np.uint8)
+    display = np.zeros((480, 640, 3), np.uint8)
 
     print(cv2.__version__)
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
     cap.set(3, 1280)
     cap.set(4, 720)
     # cap.set(5, 60)
@@ -91,7 +97,7 @@ def positionThread():
         # world plot
         plot = np.zeros((480, 640, 3), np.uint8)
         x_center = plot.shape[1] // 2
-        y_center = plot.hsape[0] // 2
+        y_center = plot.shape[0] // 2
         zoom = 40
         plot = cv2.circle(plot, (320, 240), 5, (0, 255, 0), 1)
 
@@ -137,6 +143,7 @@ def positionThread():
         corners, ids, rejectedImgPoints = aruco.detectMarkers(frame, aruco_dict)
 
         if np.all(ids != None):
+            ids = [id[0] for id in ids]
             display = aruco.drawDetectedMarkers(frame, corners)
             size_of_marker = 0.3  # side lenght of the marker in meter
             rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(
@@ -151,14 +158,16 @@ def positionThread():
                     display, mtx, dist, rvecs[i], tvecs[i], length_of_axis
                 )
                 rs, _ = cv2.Rodrigues(rvecs[i])
-                real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1])) + rot_offsets[i]
+                real_rotation = np.rad2deg(np.arctan2(rs[0][1], rs[1][1])) + rot_offsets[ids[i]]
                 real_rotation += (real_rotation < -180) * 360 - (
                     real_rotation > 180
                 ) * 360
                 cam_pos, q = get_worldPos_from_aruco(tvecs[i], rs)
-                cam_pos[0], cam_pos[1] = -cam_pos[1], cam_pos[0]
-                cam_pos[0] += pos_offsets[i][0]
-                cam_pos[1] += pos_offsets[i][1]
+
+                if ids[i] in [2,3]:
+                    cam_pos[0], cam_pos[1] = -cam_pos[1], cam_pos[0]
+                cam_pos[0] += pos_offsets[ids[i]][0]
+                cam_pos[1] += pos_offsets[ids[i]][1]
                 try:
                     plot = cv2.circle(
                         plot,
@@ -224,17 +233,10 @@ def positionThread():
                 )
             except Exception as e:
                 print('robot', e)
-
-            cv2.imshow("Display", display)
-            cv2.imshow("Plot", plot)
         else:
             display = frame
-            cv2.imshow("Display", display)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
+        final_plot = plot.copy()
+        final_display = display.copy()
 
 
 # -----------------------------------------------------------
@@ -254,7 +256,10 @@ class GlobalData:
         return real_rotation
 
     def getPlot(self):
-        return plot
+        return final_plot
+    
+    def getDisplay(self):
+        return final_display
     
     def setTarget(self, dest):
         global despoint

@@ -50,30 +50,30 @@ def stateAction(robot):
     global move_spd, rot_spd
 
     if state == 0:  # Set target
-        while True:
-            tg = input(
-                "press c for capture target position: "
-            )  # c for capture, q for quit
-            if tg == "q":  # quit
-                is_running = False
-                break
-            elif tg == "c":  # capture target
-                dest = [
-                    sta.getPosition()[0],
-                    sta.getPosition()[1],
-                ]  # TODO: set dest position
-                sta.setTarget(dest)
-                print("Set target position: %f,%f" % (dest[0], dest[1]))
-            elif tg == "s":
-                init_pos = [
-                    sta.getPosition()[0],
-                    sta.getPosition()[1],
-                ]  # TODO: set init position
-                sta.setStart(init_pos)
-                print("Set initial position: %f,%f" % (init_pos[0], init_pos[1]))
-                break
+        """tg = input(
+            "press c for capture target position: "
+        )  # c for capture, q for quit
+        """
+        tg = (cv2.waitKey(10) & 0xFF)
+        if tg == ord("q"):  # quit
+            is_running = False
+        elif tg == ord("c"):  # capture target
+            dest = [
+                sta.getPosition()[0],
+                sta.getPosition()[1],
+            ]  # TODO: set dest position
+            sta.setTarget(dest)
+            print("Set target position: %f,%f" % (dest[0], dest[1]))
+        elif tg == ord("s"):
+            init_pos = [
+                sta.getPosition()[0],
+                sta.getPosition()[1],
+            ]  # TODO: set init position
+            sta.setStart(init_pos)
+            state = 1
+            print("Set initial position: %f,%f" % (init_pos[0], init_pos[1]))
 
-    elif state == 1:  # align target
+    if state == 1:  # align target
         robot.drivedirect(rot_spd, -rot_spd)
 
     elif state == 2:  # move forward
@@ -107,11 +107,9 @@ def stateTransition(robot):
     global atandeg
     global mline_counter
 
-    if state == 0:  # Set target -> align target
-        state = 1
 
 
-    elif state == 1:  # align target -> move forward
+    if state == 1:  # align target -> move forward
         diffx = dest[0] - init_pos[0]
         diffy = dest[1] - init_pos[1]
         print("Diff", diffx, diffy, np.degrees(np.arctan2(-diffx, -diffy)))
@@ -123,10 +121,12 @@ def stateTransition(robot):
         print("loop", nowRotate, atandeg)
         while not(abs(atandeg - nowRotate) < 5 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5 )):
             orient = sta.getRotation()
+            cv2.imshow("Plot", sta.getPlot())
+            cv2.imshow("Display", sta.getDisplay())
             # nowRotate = 360 - ((orient + 360) % 360)
             nowRotate = (orient + 377) % 360
             print(nowRotate, atandeg)
-            time.sleep(0.010)
+            cv2.waitKey(10)
         state = 2
 
 
@@ -177,11 +177,13 @@ def stateTransition(robot):
         # nowRotate = 360 - ((orient + 360) % 360)
         nowRotate = (orient + 377) % 360
         while not(abs(atandeg - nowRotate) < 5 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5 )):
+            cv2.imshow("Plot", sta.getPlot())
+            cv2.imshow("Display", sta.getDisplay())
             orient = sta.getRotation()
             # nowRotate = 360 - ((orient + 360) % 360)
             nowRotate = (orient + 377) % 360
             print(nowRotate, atandeg)
-            time.sleep(0.010)
+            cv2.waitKey(10)
         state = 2
 
 
@@ -216,7 +218,7 @@ def real_orient(orient):
 
 # --------------------------------------------------
 # Main loop
-cv2.namedWindow('plot')
+# --------------------------------------------------
 while is_running:
     # TODO: get new pos
     pos = [sta.getPosition()[0], sta.getPosition()[1]]
@@ -229,6 +231,8 @@ while is_running:
     # robot.data.bumperL
     stateTransition(robot)
 
-    cv2.imshow('plot', sta.getPlot())
+    cv2.imshow("Plot", sta.getPlot())
+    cv2.imshow("Display", sta.getDisplay())
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
+robot.drivedirect(0,0)
