@@ -22,6 +22,30 @@ final_plot = np.zeros((480, 640, 3), np.uint8)
 final_display = np.zeros((480, 640, 3), np.uint8)
 dis_threshold = 0.05
 
+def draw_grid(image):
+    rows = 480
+    cols = 640
+
+    step = 10
+    x = np.linspace(start=0, stop=cols, num=cols//step)
+    y = np.linspace(start=0, stop=rows, num=rows//step)
+
+    v_xy = []
+    h_xy = []
+    for i in range(cols//step):
+        v_xy.append( [int(x[i]), 0, int(x[i]), rows-1] )
+    for i in range(rows//step):
+        h_xy.append( [0, int(y[i]), cols-1, int(y[i])] )
+
+
+    for i in range(cols//step):
+        [x1, y1, x2, y2] = v_xy[i]
+        image = cv2.line(image, (x1,y1), (x2, y2), (255,255,255),1 )
+    for i in range(rows//step):
+        [x1_, y1_, x2_, y2_] = h_xy[i]
+        image = cv2.line(image, (x1_,y1_), (x2_, y2_), (255,255,255),1 )
+    return image
+
 def distance(x1,y1,x2,y2):
     return (x1-x2) * (x1-x2) + (y1-y2) * (y1-y2)
 
@@ -96,6 +120,7 @@ def positionThread():
     while True:
         # world plot
         plot = np.zeros((480, 640, 3), np.uint8)
+        plot = draw_grid(plot)
         x_center = plot.shape[1] // 2
         y_center = plot.shape[0] // 2
         zoom = 40
