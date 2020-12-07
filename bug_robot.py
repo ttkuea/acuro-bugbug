@@ -15,7 +15,7 @@ sta = GlobalData()
 #     cv2.waitKey(20)
 
 # Initialize
-robot = Robot("COM3")
+robot = Robot("/dev/ttyUSB0")
 is_running = True
 state = 0
 substate = 0  # substate for state 3 - follow wall
@@ -28,7 +28,7 @@ state_desc = [
 ]
 init_pos = None
 pos = [0, 0, 0]  # x, y, z
-curr_pos = [0,0]
+curr_pos = [0, 0]
 dest = None
 orient = 0  # Degree
 substate_orient = 0
@@ -37,10 +37,10 @@ rot_spd = 50
 
 mline_counter = 0
 
-atandeg=0
+atandeg = 0
 
 treshold = 21
-robot.drivedirect(0,0)
+robot.drivedirect(0, 0)
 
 # --------------------------------------------------
 def stateAction(robot):
@@ -54,7 +54,7 @@ def stateAction(robot):
             "press c for capture target position: "
         )  # c for capture, q for quit
         """
-        tg = (cv2.waitKey(10) & 0xFF)
+        tg = cv2.waitKey(10) & 0xFF
         if tg == ord("q"):  # quit
             is_running = False
         elif tg == ord("c"):  # capture target
@@ -93,9 +93,10 @@ def stateAction(robot):
     elif state == 4:  # finish
         robot.drivedirect(0, 0)
         pass
-    
+
     elif state == 5:
         robot.drivedirect(rot_spd, -rot_spd)
+
 
 # --------------------------------------------------
 def stateTransition(robot):
@@ -107,8 +108,6 @@ def stateTransition(robot):
     global atandeg
     global mline_counter
 
-
-
     if state == 1:  # align target -> move forward
         diffx = dest[0] - init_pos[0]
         diffy = dest[1] - init_pos[1]
@@ -117,9 +116,13 @@ def stateTransition(robot):
         orient = sta.getRotation()
         # nowRotate = 360 - ((orient + 360) % 360)
         nowRotate = (orient + 377) % 360
-        
+
         print("loop", nowRotate, atandeg)
-        while not(abs(atandeg - nowRotate) < 5 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5 )):
+        while not (
+            abs(atandeg - nowRotate) < 5
+            or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5)
+            or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5)
+        ):
             orient = sta.getRotation()
             cv2.imshow("Plot", sta.getPlot())
             cv2.imshow("Display", sta.getDisplay())
@@ -129,23 +132,26 @@ def stateTransition(robot):
             cv2.waitKey(10)
         state = 2
 
-
     elif state == 2:  # move forward -> follow wall, finish
         if robot.data.bumperL == 1 or robot.data.bumperR == 1:
-        # if robot.data.wallSignal > 25:
+            # if robot.data.wallSignal > 25:
             state = 3
             substate_orient = orient
         # TODO: xxx
 
         # print(pos,dest)
         # print((pos[0]*100 - dest[0]*100) ** 2 + (pos[1] - dest[1]) ** 2, treshold ** 2)
-        if (pos[0]*100 - dest[0]*100) ** 2 + (pos[1]*100 - dest[1]*100) ** 2 <= treshold ** 2:
-            print('2 at target')
+        if (pos[0] * 100 - dest[0] * 100) ** 2 + (
+            pos[1] * 100 - dest[1] * 100
+        ) ** 2 <= treshold ** 2:
+            print("2 at target")
             state = 4
 
     elif state == 3:  # follow wall -> align target
-        if (pos[0]*100 - dest[0]*100) ** 2 + (pos[1]*100 - dest[1]*100) ** 2 <= treshold ** 2:
-            print('3 at target')
+        if (pos[0] * 100 - dest[0] * 100) ** 2 + (
+            pos[1] * 100 - dest[1] * 100
+        ) ** 2 <= treshold ** 2:
+            print("3 at target")
             state = 4
         if is_on_mline(init_pos, pos, dest) and mline_counter >= 10:
             print("CHECK MLINE")
@@ -168,7 +174,7 @@ def stateTransition(robot):
     elif state == 4:  # finish
         pass
 
-    elif state == 5: # rotate after mline
+    elif state == 5:  # rotate after mline
         diffx = dest[0] - init_pos[0]
         diffy = dest[1] - init_pos[1]
         print("Diff", diffx, diffy, np.degrees(np.arctan2(-diffx, -diffy)))
@@ -176,7 +182,11 @@ def stateTransition(robot):
         orient = sta.getRotation()
         # nowRotate = 360 - ((orient + 360) % 360)
         nowRotate = (orient + 377) % 360
-        while not(abs(atandeg - nowRotate) < 5 or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5) or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5 )):
+        while not (
+            abs(atandeg - nowRotate) < 5
+            or (atandeg > nowRotate and abs(atandeg - nowRotate + 360) < 5)
+            or (atandeg < nowRotate and abs(nowRotate - atandeg + 360) < 5)
+        ):
             cv2.imshow("Plot", sta.getPlot())
             cv2.imshow("Display", sta.getDisplay())
             orient = sta.getRotation()
@@ -206,7 +216,7 @@ def is_on_mline(init_pos, pos, dest):
     s = np.sqrt((init_pos[0] - dest[0]) ** 2 + (init_pos[1] - dest[1]) ** 2)
     d1 = np.sqrt((init_pos[0] - pos[0]) ** 2 + (init_pos[1] - pos[1]) ** 2)
     d2 = np.sqrt((pos[0] - dest[0]) ** 2 + (pos[1] - dest[1]) ** 2)
-    #print(d1+d2,s)
+    # print(d1+d2,s)
     return d1 + d2 <= s + 0.01
 
 
@@ -219,6 +229,9 @@ def real_orient(orient):
 # --------------------------------------------------
 # Main loop
 # --------------------------------------------------
+cv2.namedWindow("Plot", cv2.WINDOW_NORMAL)
+cv2.namedWindow("Display", cv2.WINDOW_NORMAL)
+count = 0
 while is_running:
     # TODO: get new pos
     pos = [sta.getPosition()[0], sta.getPosition()[1]]
@@ -235,4 +248,7 @@ while is_running:
     cv2.imshow("Display", sta.getDisplay())
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
-robot.drivedirect(0,0)
+    count += 1
+    if count % 50 == 0:
+        print(pos)
+robot.drivedirect(0, 0)
