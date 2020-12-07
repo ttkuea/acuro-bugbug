@@ -11,6 +11,8 @@ class OccupancyGrid:
         self.resolution = resolution
         self.logOdd_occ = logOdd_occ
         self.logOdd_free = logOdd_free
+        self.max_treshold = 10
+        self.min_treshold = -10
 
     def getShape(self):
         return self.grid.shape
@@ -22,13 +24,20 @@ class OccupancyGrid:
         if x >= self.grid.shape[0] or y >= self.grid.shape[1]:
             raise Exception("Error: index " + str((x, y)) + " is out of range " + str(self.grid.shape) + "!")
 
-        self.grid[x, y] += self.logOdd_occ
+        if self.grid[x, y] + self.logOdd_occ <= self.max_treshold:
+            self.grid[x, y] += self.logOdd_occ
+        else:
+            self.grid[x, y] = self.max_treshold
+
 
     def setFreeCell(self, x, y):
         if x >= self.grid.shape[0] or y >= self.grid.shape[1]:
             raise Exception("Error: index " + str((x, y)) + " is out of range " + str(self.grid.shape) + "!")
 
-        self.grid[x, y] -= self.logOdd_free
+        if self.grid[x, y] - self.logOdd_free >= self.min_treshold:
+            self.grid[x, y] -= self.logOdd_free
+        else:
+            self.grid[x, y] = self.min_treshold
 
     def updateOccupy(self, start_point, end_point):
         x0, y0 = start_point
@@ -52,7 +61,8 @@ if __name__ == "__main__":
     shape = (10, 10)
     resolution = 1
     occupancy_grid = OccupancyGrid(shape=shape, resolution=resolution)
-    for x, y in [(x, np.sqrt(25 - x ** 2)) for x in range(6)]:
-        print(x, y)
-        occupancy_grid.updateOccupy((0, 0), (x, y))
+    # for x, y in [(x, np.sqrt(25 - x ** 2)) for x in range(6)]:
+        # print(x, y)
+    for _ in range(10):
+        occupancy_grid.updateOccupy((0, 0), (10, 10))
     print(occupancy_grid.grid)
