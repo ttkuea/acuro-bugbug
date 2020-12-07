@@ -126,6 +126,7 @@ def stateTransition(robot):
             orient = sta.getRotation()
             cv2.imshow("Plot", sta.getPlot())
             cv2.imshow("Display", sta.getDisplay())
+            cv2.imshow("Occupancy", sta.getOccupancy())
             # nowRotate = 360 - ((orient + 360) % 360)
             nowRotate = (orient + 377) % 360
             print(nowRotate, atandeg)
@@ -189,6 +190,7 @@ def stateTransition(robot):
         ):
             cv2.imshow("Plot", sta.getPlot())
             cv2.imshow("Display", sta.getDisplay())
+            cv2.imshow("Occupancy", sta.getOccupancy())
             orient = sta.getRotation()
             # nowRotate = 360 - ((orient + 360) % 360)
             nowRotate = (orient + 377) % 360
@@ -231,6 +233,7 @@ def real_orient(orient):
 # --------------------------------------------------
 cv2.namedWindow("Plot", cv2.WINDOW_NORMAL)
 cv2.namedWindow("Display", cv2.WINDOW_NORMAL)
+cv2.namedWindow("Occupancy", cv2.WINDOW_NORMAL)
 count = 0
 while is_running:
     # TODO: get new pos
@@ -246,6 +249,7 @@ while is_running:
 
     cv2.imshow("Plot", sta.getPlot())
     cv2.imshow("Display", sta.getDisplay())
+    cv2.imshow("Occupancy", sta.getOccupancy())
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
     count += 1

@@ -24,6 +24,7 @@ startpoint = [0, 0]
 plot = np.zeros((480, 640, 3), np.uint8)
 final_plot = np.zeros((480, 640, 3), np.uint8)
 final_display = np.zeros((480, 640, 3), np.uint8)
+final_occupancy = np.zeros((200, 200, 1), np.uint8)
 dis_threshold = 0.05
 
 
@@ -31,7 +32,7 @@ def draw_grid(image):
     rows = 480
     cols = 640
 
-    color = (100, 100, 100)
+    color = (50, 50, 50)
 
     step = 10
     x = np.linspace(start=0, stop=cols, num=cols // step)
@@ -81,6 +82,7 @@ def positionThread():
     global real_rotation
     global final_plot
     global final_display
+    global final_occupancy
 
     ctx = freenect.init()
 
@@ -126,11 +128,14 @@ def positionThread():
     real_world_pos = [0, 0, 0]
     real_rotation = None
     notfound = 0
+    ready = False
 
     # Kinect
-    resolution = 0.305
-    occupancy_grid = OccupancyGrid(shape=(20, 20), resolution=resolution)
-    min_coordinate = resolution * 10
+    resolution = 0.1525
+    occupancy_grid = OccupancyGrid(shape=(40, 40), resolution=resolution)
+    occupancy_grid.min_treshold = -50
+    occupancy_grid.max_treshold = 50
+    min_coordinate = resolution * 20
 
     while True:
         # world plot
@@ -229,8 +234,9 @@ def positionThread():
                         real_world_pos[0], real_world_pos[1], cam_pos[0], cam_pos[1]
                     )
                     < dis_threshold
-                    or notfound > 50
+                    or notfound > 5
                 ):
+                    ready = True
                     tmp_real_world_pos[0] += cam_pos[0]
                     tmp_real_world_pos[1] += cam_pos[1]
                     tmp_real_world_pos[2] += 1
@@ -293,9 +299,10 @@ def positionThread():
         # Kinect data
         array = get_real_depth()
         npdata = get_real_obs_pos(array)
-        print(npdata.shape)
-        sample = npdata[np.random.randint(npdata.shape[0], size=50), :]
-        for point in sample:
+        # print(npdata.shape)
+        npdata = npdata[np.random.randint(npdata.shape[0], size=100), :]
+        npdata = sorted(npdata, key=lambda x: -x[1])
+        for point in npdata:
             r_sin = np.sin((real_rotation + 17) * np.pi / 180)
             r_cos = np.cos((real_rotation + 17) * np.pi / 180)
             R = np.array([[r_cos, -r_sin], [r_sin, r_cos]])
@@ -310,19 +317,29 @@ def positionThread():
                 (0, 255, 0),
                 -1,
             )
-            occupancy_grid.updateOccupy(
-                (
-                    real_world_pos[0] + min_coordinate,
-                    real_world_pos[1] + min_coordinate,
-                ),
-                (
-                    real_world_pos[0] + point_rotated[0][0] + min_coordinate,
-                    real_world_pos[1] - point_rotated[1][0] + min_coordinate,
-                ),
-            )
-        print(occupancy_grid.grid)
+            if ready:
+                occupancy_grid.updateOccupy(
+                    (
+                        real_world_pos[0] + min_coordinate,
+                        real_world_pos[1] + min_coordinate,
+                    ),
+                    (
+                        real_world_pos[0] + point_rotated[0][0] + min_coordinate,
+                        real_world_pos[1] - point_rotated[1][0] + min_coordinate,
+                    ),
+                )
+            # occupancy_grid.updateOccupy((3, 3), (0, 0))
+            # occupancy_grid.updateOccupy((3, 3), (6, 6))
+            # occupancy_grid.updateOccupy((3, 3), (6, 0))
+            # occupancy_grid.updateOccupy((3, 3), (0, 6))
+
+        # print(occupancy_grid.grid)
         final_plot = plot.copy()
         final_display = display.copy()
+        occupancy_range = occupancy_grid.max_treshold - occupancy_grid.min_treshold
+        final_occupancy = (
+            (occupancy_grid.grid - occupancy_grid.min_treshold) / occupancy_range * 255
+        ).astype(np.uint8)
 
 
 # -----------------------------------------------------------
@@ -346,6 +363,9 @@ class GlobalData:
 
     def getDisplay(self):
         return final_display
+
+    def getOccupancy(self):
+        return final_occupancy
 
     def setTarget(self, dest):
         global despoint

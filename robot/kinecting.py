@@ -38,6 +38,8 @@ def get_real_obs_pos(array):
     focal_y = 480 / (2 * np.tan(43 / 2))
     focal_x = 640 / (2 * np.tan(57 / 2))
 
+    # zi = [[0, np.inf]] * 640  # x, y, z
+
     xplot = []
     yplot = []
 
@@ -45,7 +47,20 @@ def get_real_obs_pos(array):
         for j in range(array.shape[0]):  # j = height == row
             xx = z[j, i] * (i - w / 2) / focal_x * 2
             yy = z[j, i] * (j - h / 2) / focal_y + 0.3
-            if z[j, i] > 0 and z[j, i] < 4 and yy < 0.32 and yy > 0.05:
+            if (
+                z[j, i] > 0
+                and z[j, i] < 5
+                and yy < 0.27
+                and yy > 0.05
+                # and z[j, i] < zi[i][1]
+            ):
                 xplot.append(xx)
                 yplot.append(z[j, i])
+                # zi[i] = [xx, z[j, i]]
+
+    # for p in zi:
+    #     if p[1] is not np.inf:
+    #         xplot.append(p[0])
+    #         yplot.append(p[1])
+
     return np.stack((np.array(xplot), np.array(yplot)), axis=-1)
