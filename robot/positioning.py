@@ -1,31 +1,18 @@
+import ctypes
 import math
 import threading
 import time
 from collections import defaultdict
+from multiprocessing import Array, Manager, Process
 from pprint import pprint
 
 import cv2
 import cv2.aruco as aruco
-import freenect
 import numpy as np
 import yaml
 from flask import Flask, jsonify
 
 from robot.robot import Robot
-
-from .kinecting import get_real_depth, get_real_dist, get_real_obs_pos
-from .occupancy_grid import OccupancyGrid
-
-real_world_pos = [0, 0, 0]
-real_rotation = None
-despoint = [0, 0]
-startpoint = [0, 0]
-
-plot = np.zeros((480, 640, 3), np.uint8)
-final_plot = np.zeros((480, 640, 3), np.uint8)
-final_display = np.zeros((480, 640, 3), np.uint8)
-final_occupancy = np.zeros((200, 200, 1), np.uint8)
-dis_threshold = 0.05
 
 
 def draw_grid(image):
@@ -77,17 +64,25 @@ def get_worldPos_from_aruco(tvec, dstl):
     return np.array(worldPos), 1
 
 
-def positionThread():
-    global real_world_pos
-    global real_rotation
-    global final_plot
-    global final_display
-    global final_occupancy
-
-    ctx = freenect.init()
+def positionProcess(
+    real_world_pos,
+    real_rotation,
+    final_plot,
+    final_display,
+    despoint,
+    startpoint,
+    ready,
+):
+    dis_threshold = 0.05
+    # These will need to be shared
+    # global real_world_pos
+    # global real_rotation
+    # global final_plot
+    # global final_display
+    # global final_occupancy
 
     plot = np.zeros((480, 640, 3), np.uint8)
-    display = np.zeros((480, 640, 3), np.uint8)
+    display = np.zeros((720, 1280, 3), np.uint8)
 
     print(cv2.__version__)
 
@@ -124,20 +119,18 @@ def positionThread():
     ]
 
     cam_pos = None
-
-    real_world_pos = [0, 0, 0]
-    real_rotation = None
     notfound = 0
-    ready = False
+    ready.value = False
 
     # Kinect
-    resolution = 0.1525
-    occupancy_grid = OccupancyGrid(shape=(40, 40), resolution=resolution)
-    occupancy_grid.min_treshold = -50
-    occupancy_grid.max_treshold = 50
-    min_coordinate = resolution * 20
+    # resolution = 0.1525
+    # occupancy_grid = OccupancyGrid(shape=(40, 40), resolution=resolution)
+    # occupancy_grid.min_treshold = -50
+    # occupancy_grid.max_treshold = 50
+    # min_coordinate = resolution * 20
 
     while True:
+        print("a1")
         # world plot
         plot = np.zeros((480, 640, 3), np.uint8)
         plot = draw_grid(plot)
@@ -186,7 +179,6 @@ def positionThread():
 
         aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
         corners, ids, rejectedImgPoints = aruco.detectMarkers(frame, aruco_dict)
-
         if np.all(ids != None):
             ids = [id[0] for id in ids]
             display = aruco.drawDetectedMarkers(frame, corners)
@@ -203,12 +195,11 @@ def positionThread():
                     display, mtx, dist, rvecs[i], tvecs[i], length_of_axis
                 )
                 rs, _ = cv2.Rodrigues(rvecs[i])
-                real_rotation = (
+                real_rot = (
                     np.rad2deg(np.arctan2(rs[0][1], rs[1][1])) + rot_offsets[ids[i]]
                 )
-                real_rotation += (real_rotation < -180) * 360 - (
-                    real_rotation > 180
-                ) * 360
+                real_rot += (real_rot < -180) * 360 - (real_rot > 180) * 360
+                real_rotation.value = real_rot
                 cam_pos, q = get_worldPos_from_aruco(tvecs[i], rs)
 
                 if ids[i] in [2, 3]:
@@ -236,11 +227,10 @@ def positionThread():
                     < dis_threshold
                     or notfound > 5
                 ):
-                    ready = True
+                    ready.value = True
                     tmp_real_world_pos[0] += cam_pos[0]
                     tmp_real_world_pos[1] += cam_pos[1]
                     tmp_real_world_pos[2] += 1
-
             if tmp_real_world_pos[2] > 0:
                 notfound = 0
                 real_world_pos[0] = tmp_real_world_pos[0] / tmp_real_world_pos[2]
@@ -281,12 +271,12 @@ def positionThread():
                         x_center
                         + int(
                             real_world_pos[0] * zoom
-                            - radius * np.sin((real_rotation + 17) * np.pi / 180)
+                            - radius * np.sin((real_rotation.value + 17) * np.pi / 180)
                         ),
                         y_center
                         + int(
                             real_world_pos[1] * zoom
-                            - radius * np.cos((real_rotation + 17) * np.pi / 180)
+                            - radius * np.cos((real_rotation.value + 17) * np.pi / 180)
                         ),
                     ),
                     (255, 255, 255),
@@ -296,15 +286,17 @@ def positionThread():
                 print("robot", e)
         else:
             display = frame
+        """
         # Kinect data
         array = get_real_depth()
         npdata = get_real_obs_pos(array)
         # print(npdata.shape)
         npdata = npdata[np.random.randint(npdata.shape[0], size=100), :]
         npdata = sorted(npdata, key=lambda x: -x[1])
+        
         for point in npdata:
-            r_sin = np.sin((real_rotation + 17) * np.pi / 180)
-            r_cos = np.cos((real_rotation + 17) * np.pi / 180)
+            r_sin = np.sin((real_rotation.value + 17) * np.pi / 180)
+            r_cos = np.cos((real_rotation.value + 17) * np.pi / 180)
             R = np.array([[r_cos, -r_sin], [r_sin, r_cos]])
             point_rotated = R @ np.reshape(point, (2, 1))
             plot = cv2.circle(
@@ -328,50 +320,142 @@ def positionThread():
                         real_world_pos[1] - point_rotated[1][0] + min_coordinate,
                     ),
                 )
-            # occupancy_grid.updateOccupy((3, 3), (0, 0))
-            # occupancy_grid.updateOccupy((3, 3), (6, 6))
-            # occupancy_grid.updateOccupy((3, 3), (6, 0))
-            # occupancy_grid.updateOccupy((3, 3), (0, 6))
-
+        """
+        # occupancy_grid.updateOccupy((3, 3), (0, 0))
+        # occupancy_grid.updateOccupy((3, 3), (6, 6))
+        # occupancy_grid.updateOccupy((3, 3), (6, 0))
+        # occupancy_grid.updateOccupy((3, 3), (0, 6))
         # print(occupancy_grid.grid)
-        final_plot = plot.copy()
-        final_display = display.copy()
-        occupancy_range = occupancy_grid.max_treshold - occupancy_grid.min_treshold
-        final_occupancy = (
-            (occupancy_grid.grid - occupancy_grid.min_treshold) / occupancy_range * 255
-        ).astype(np.uint8)
+        with final_plot.get_lock():
+            final_plot[:] = plot.flatten()[:]
+        with final_display.get_lock():
+            final_display[:] = display.flatten()[:]
 
 
 # -----------------------------------------------------------
+# Kinect Process
+
+
+def kinect_process(real_world_pos, real_rotation, ready, final_occupancy):
+    import freenect
+
+    from .kinecting import get_real_depth, get_real_dist, get_real_obs_pos
+    from .occupancy_grid import OccupancyGrid
+
+    # Kinect
+    resolution = 0.1525
+    occupancy_grid = OccupancyGrid(shape=(40, 40), resolution=resolution)
+    occupancy_grid.min_treshold = -50
+    occupancy_grid.max_treshold = 50
+    min_coordinate = resolution * 20
+
+    ctx = freenect.init()
+
+    while True:
+        # Kinect data
+        array = get_real_depth()
+        npdata = get_real_obs_pos(array)
+        if npdata.shape[0] > 0:
+            npdata = npdata[np.random.randint(npdata.shape[0], size=100), :]
+        npdata = sorted(npdata, key=lambda x: -x[1])
+
+        for point in npdata:
+            if ready.value:
+                r_sin = np.sin((real_rotation.value + 17) * np.pi / 180)
+                r_cos = np.cos((real_rotation.value + 17) * np.pi / 180)
+                R = np.array([[r_cos, -r_sin], [r_sin, r_cos]])
+                point_rotated = R @ np.reshape(point, (2, 1))
+                occupancy_grid.updateOccupy(
+                    (
+                        real_world_pos[0] + min_coordinate,
+                        real_world_pos[1] + min_coordinate,
+                    ),
+                    (
+                        real_world_pos[0] + point_rotated[0][0] + min_coordinate,
+                        real_world_pos[1] - point_rotated[1][0] + min_coordinate,
+                    ),
+                )
+        occupancy_range = occupancy_grid.max_treshold - occupancy_grid.min_treshold
+        final_occupancies = (
+            (occupancy_grid.grid - occupancy_grid.min_treshold) / occupancy_range * 255
+        ).astype(np.uint8)
+        with final_occupancy.get_lock():
+            final_occupancy[:] = final_occupancies.flatten()[:]
+
 
 # -----------------------------------------------------------
 
 
 class GlobalData:
     def __init__(self):
-        t1 = threading.Thread(target=positionThread)
+        manager = Manager()
+        self.real_world_pos = manager.list([0, 0, 0])
+        self.real_rotation = manager.Value("d", 0.0)
+        self.ready = manager.Value(ctypes.c_bool, False)
+        self.final_plot = Array(ctypes.c_int8, 480 * 640 * 3)
+        self.final_display = Array(ctypes.c_int8, 720 * 1280 * 3)
+        self.final_occupancy = Array(ctypes.c_int8, 40 * 40)
+        self.despoint = manager.list([0, 0])
+        self.startpoint = manager.list([0, 0])
+        t1 = Process(
+            target=positionProcess,
+            args=(
+                self.real_world_pos,
+                self.real_rotation,
+                self.final_plot,
+                self.final_display,
+                self.despoint,
+                self.startpoint,
+                self.ready,
+            ),
+        )
         t1.start()
+        t2 = Process(
+            target=kinect_process,
+            args=(
+                self.real_world_pos,
+                self.real_rotation,
+                self.ready,
+                self.final_occupancy,
+            ),
+        )
+        t2.start()
 
     def getPosition(self):
-        return real_world_pos
+        return self.real_world_pos
 
     def getRotation(self):
-        return real_rotation
+        return self.real_rotation.value
 
     def getPlot(self):
-        return final_plot
+        with self.final_plot.get_lock():  # synchronize access
+            arr = np.frombuffer(
+                self.final_plot.get_obj(), dtype=np.uint8
+            )  # no data copying
+            arr = arr.reshape((480, 640, 3))
+            return arr
 
     def getDisplay(self):
-        return final_display
+        with self.final_display.get_lock():  # synchronize access
+            arr = np.frombuffer(
+                self.final_display.get_obj(), dtype=np.uint8
+            )  # no data copying
+            arr = arr.reshape((720, 1280, 3))
+            return arr
 
     def getOccupancy(self):
-        return final_occupancy
+        with self.final_occupancy.get_lock():  # synchronize access
+            arr = np.frombuffer(
+                self.final_occupancy.get_obj(), dtype=np.uint8
+            )  # no data copying
+            arr = arr.reshape((40, 40))
+            return arr
 
     def setTarget(self, dest):
-        global despoint
-        despoint = dest
+        self.despoint[0] = dest[0]
+        self.despoint[1] = dest[1]
 
     def setStart(self, start):
-        global startpoint
         print(start)
-        startpoint = start
+        self.startpoint[0] = start[0]
+        self.startpoint[1] = start[1]
