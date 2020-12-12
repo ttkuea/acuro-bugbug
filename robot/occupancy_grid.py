@@ -61,17 +61,33 @@ class OccupancyGrid:
                     ((yf - y0) * (x_int * self.resolution - x0) / (xf - x0) + y0)
                     // self.resolution
                 )
-                if 0 <= x_int < self.grid.shape[0] and 0 <= y_int < self.grid.shape[1] and (np.abs(x_int - x_int0) > 2 or np.abs(y_int - y_int0) > 2):
+                if (
+                    0 <= x_int < self.grid.shape[0]
+                    and 0 <= y_int < self.grid.shape[1]
+                    and (np.abs(x_int - x_int0) > 2 or np.abs(y_int - y_int0) > 2)
+                ):
                     self.setFreeCell(x_int, y_int)
 
                 y_int = int(
                     ((y_intf - y_int0) * (x_int - x_int0) / (x_intf - x_int0) + y_int0)
                 )
-                if 0 <= x_int < self.grid.shape[0] and 0 <= y_int < self.grid.shape[1] and (np.abs(x_int - x_int0) > 2 or np.abs(y_int - y_int0) > 2):
+                if (
+                    0 <= x_int < self.grid.shape[0]
+                    and 0 <= y_int < self.grid.shape[1]
+                    and (np.abs(x_int - x_int0) > 2 or np.abs(y_int - y_int0) > 2)
+                ):
                     self.setFreeCell(x_int, y_int)
 
-        if 0 <= x_intf < self.grid.shape[0] and 0 <= y_intf < self.grid.shape[1]:
-            self.setOccupiedCell(x_intf, y_intf)
+        sign_x = 1 * (xf > x0) - 1 * (xf < x0)
+        sign_y = 1 * (yf > y0) - 1 * (yf < y0)
+
+        for dxy in [0, 1, 2]:
+
+            x_int = x_intf + sign_x * dxy
+            y_int = y_intf + sign_y * dxy
+
+            if 0 <= x_int < self.grid.shape[0] and 0 <= y_int < self.grid.shape[1]:
+                self.setOccupiedCell(x_int, y_int)
 
 
 if __name__ == "__main__":
@@ -79,7 +95,7 @@ if __name__ == "__main__":
     resolution = 1
     occupancy_grid = OccupancyGrid(shape=shape, resolution=resolution)
     # for x, y in [(x, np.sqrt(25 - x ** 2)) for x in range(6)]:
-        # print(x, y)
+    # print(x, y)
     for _ in range(10):
         occupancy_grid.updateOccupy((0, 0), (10, 10))
     print(occupancy_grid.grid)

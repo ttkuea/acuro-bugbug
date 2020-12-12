@@ -353,7 +353,7 @@ def kinect_process(real_world_pos, real_rotation, ready, final_occupancy):
         array = get_real_depth()
         npdata = get_real_obs_pos(array)
         if npdata.shape[0] > 0:
-            npdata = npdata[np.random.randint(npdata.shape[0], size=100), :]
+            npdata = npdata[np.random.randint(npdata.shape[0], size=200), :]
         npdata = sorted(npdata, key=lambda x: -x[1])
 
         for point in npdata:
