@@ -86,7 +86,7 @@ def positionProcess(
 
     print(cv2.__version__)
 
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(0)
     cap.set(3, 1280)
     cap.set(4, 720)
     # cap.set(5, 60)

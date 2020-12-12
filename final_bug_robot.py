@@ -154,7 +154,7 @@ def stateTransition(robot):
         if (pos[0]*100 - dest[0]*100) ** 2 + (pos[1]*100 - dest[1]*100) ** 2 <= treshold ** 2:
             print('3 at target')
             state = 4
-        if is_on_mline(init_pos, pos, dest) and mline_counter >= 10:
+        if is_on_mline(init_pos, pos, dest) and mline_counter >= 50:
             print("CHECK MLINE")
             state = 5
             mline_counter = 0
@@ -223,6 +223,8 @@ def real_orient(orient):
     return real_o
 
 def check_occ():
+    global pos
+    global orient
     # Kinect
     resolution = 0.1525
     # occupancy_grid.min_treshold = -50
@@ -231,20 +233,67 @@ def check_occ():
     treshold = 200
 
     occ_grid = sta.getOccupancy()
-    print(occ_grid)
-    real_world_pos = sta.getPosition()
-    
-    robot_x = (real_world_pos[0] + min_coordinate) // resolution
-    robot_y = (real_world_pos[1] + min_coordinate) // resolution
+    # print(occ_grid)
 
+    robot_x = (pos[0] + min_coordinate) // resolution
+    robot_y = (pos[1] + min_coordinate) // resolution
+
+    robot_orient = (orient + 377) % 360
+
+    #ccw = ++++++++ naja
     # print(robot_x, robot_y)
     if 0 < robot_x < 39 and 0 < robot_y < 39:
-        for i in range(-1,2):
-            for j in range(-1,2):
-                if i != 1 and j != 1:
-                    if occ_grid[int(robot_y - j), int(robot_x - i)] > treshold:
-                        return True
-        return False
+        # for i in range(-1,2):
+        #     for j in range(-1,2):
+        #         if i != 1 and j != 1:
+        #             if occ_grid[int(robot_y - j), int(robot_x - i)] > treshold:
+        #                 print(True)
+        #                 return True
+        
+        if 0 <= robot_orient < 45 or 315 <= robot_orient < 360:
+            print('Front')
+            for i in range(-1,2):
+                for j in range(-1,0): # -1,1
+                    if i != 1 and j != 1:
+                        print(robot_x, robot_y,int(robot_x - j), int(robot_y - i), occ_grid[int(robot_y - j), int(robot_x - i)])
+                        if occ_grid[int(robot_y - j), int(robot_x - i)] > treshold:
+                            print(True)
+                            return True
+
+        elif 45 <= robot_orient < 135:
+            print('Left')
+            for i in range(-1,0): #-1,1
+                for j in range(-1,2):
+                    if i != 1 and j != 1:
+                        print(int(robot_y - j), int(robot_x - i), occ_grid[int(robot_y - j), int(robot_x - i)])
+                        if occ_grid[int(robot_y - j), int(robot_x - i)] > treshold:
+                            print(True)
+                            return True
+
+        elif 135 <= robot_orient < 225:
+            print('Down')
+            for i in range(-1,2):
+                for j in range(1,2): # 0,2
+                    if i != 1 and j != 1:
+                        print(int(robot_y - j), int(robot_x - i), occ_grid[int(robot_y - j), int(robot_x - i)])
+                        if occ_grid[int(robot_y - j), int(robot_x - i)] > treshold:
+                            print(True)
+                            return True
+
+        elif 225 <= robot_orient < 315:
+            print('Right')
+            for i in range(1,2): #0,2
+                for j in range(-1,2):
+                    if i != 1 and j != 1:
+                        print(int(robot_y - j), int(robot_x - i), occ_grid[int(robot_y - j), int(robot_x - i)])
+                        if occ_grid[int(robot_y - j), int(robot_x - i)] > treshold:
+                            print(True)
+                            return True
+
+
+
+    # print(False)    
+    return False
     
 
 

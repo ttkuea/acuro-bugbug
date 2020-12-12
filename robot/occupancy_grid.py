@@ -54,19 +54,20 @@ class OccupancyGrid:
         x_intf = int(xf // self.resolution)
         y_intf = int(yf // self.resolution)
         if x_intf != x_int0:
-            X_int = range(x_int0, x_intf, (x_intf >= x_int0) - (x_intf < x_int0))
+            sign_x = (x_intf >= x_int0) - (x_intf < x_int0)
+            X_int = range(x_int0, x_intf, sign_x)
             for x_int in X_int:
                 y_int = int(
                     ((yf - y0) * (x_int * self.resolution - x0) / (xf - x0) + y0)
                     // self.resolution
                 )
-                if 0 <= x_int < self.grid.shape[0] and 0 <= y_int < self.grid.shape[1]:
+                if 0 <= x_int < self.grid.shape[0] and 0 <= y_int < self.grid.shape[1] and (np.abs(x_int - x_int0) > 2 or np.abs(y_int - y_int0) > 2):
                     self.setFreeCell(x_int, y_int)
 
                 y_int = int(
                     ((y_intf - y_int0) * (x_int - x_int0) / (x_intf - x_int0) + y_int0)
                 )
-                if 0 <= x_int < self.grid.shape[0] and 0 <= y_int < self.grid.shape[1]:
+                if 0 <= x_int < self.grid.shape[0] and 0 <= y_int < self.grid.shape[1] and (np.abs(x_int - x_int0) > 2 or np.abs(y_int - y_int0) > 2):
                     self.setFreeCell(x_int, y_int)
 
         if 0 <= x_intf < self.grid.shape[0] and 0 <= y_intf < self.grid.shape[1]:

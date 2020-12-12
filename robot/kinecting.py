@@ -57,8 +57,8 @@ def get_real_obs_pos(array):
     rows = np.where(
         (points[:, 1] < 0.27)
         & (points[:, 1] > 0.05)
-        & (points[:, 2] > 0)
-        & (points[:, 2] < 8)
+        & (points[:, 2] > 0.5)
+        & (points[:, 2] < 6)
     )
 
     choosen = points[rows]
