@@ -28,39 +28,39 @@ def get_real_dist(array):
     return 0.1236 * np.tan(array / 2842.5 + 1.1863)
 
 
+w = 640
+h = 480
+
+focal_y = 480 / (2 * np.tan(43 / 2))
+focal_x = 640 / (2 * np.tan(57 / 2))
+
+
+def point_transform(Z, i, j):
+    z = Z[j, i]
+    x = z * (i - w / 2) / focal_x * 2
+    y = z * (j - h / 2) / focal_y + 0.3
+
+    return [x, y, z]
+
+
 def get_real_obs_pos(array):
-    w = 640
-    h = 480
-    z = get_real_dist(array)
-    x = np.zeros(array.shape)
-    y = np.zeros(array.shape)
+    Z = get_real_dist(array)
 
-    focal_y = 480 / (2 * np.tan(43 / 2))
-    focal_x = 640 / (2 * np.tan(57 / 2))
+    indices = np.floor(
+        np.random.rand(1000, 2) @ np.array([[array.shape[0], 0], [0, array.shape[1]]])
+    ).astype(int)
 
-    # zi = [[0, np.inf]] * 640  # x, y, z
+    # indices = np.ndindex(*Z.shape)
 
-    xplot = []
-    yplot = []
+    points = np.array([point_transform(Z, i, j) for j, i in indices])
 
-    for i in range(array.shape[1]):  # i = width == col
-        for j in range(array.shape[0]):  # j = height == row
-            xx = z[j, i] * (i - w / 2) / focal_x * 2
-            yy = z[j, i] * (j - h / 2) / focal_y + 0.3
-            if (
-                z[j, i] > 0
-                and z[j, i] < 5
-                and yy < 0.27
-                and yy > 0.05
-                # and z[j, i] < zi[i][1]
-            ):
-                xplot.append(xx)
-                yplot.append(z[j, i])
-                # zi[i] = [xx, z[j, i]]
+    rows = np.where(
+        (points[:, 1] < 0.27)
+        & (points[:, 1] > 0.05)
+        & (points[:, 2] > 0)
+        & (points[:, 2] < 8)
+    )
 
-    # for p in zi:
-    #     if p[1] is not np.inf:
-    #         xplot.append(p[0])
-    #         yplot.append(p[1])
+    choosen = points[rows]
 
-    return np.stack((np.array(xplot), np.array(yplot)), axis=-1)
+    return np.stack([choosen[:, 0], choosen[:, 2]], axis=1)

@@ -4,6 +4,7 @@ import threading
 import time
 from collections import defaultdict
 from multiprocessing import Array, Manager, Process
+from multiprocessing.sharedctypes import RawArray
 from pprint import pprint
 
 import cv2
@@ -324,10 +325,8 @@ def positionProcess(
         # occupancy_grid.updateOccupy((3, 3), (6, 0))
         # occupancy_grid.updateOccupy((3, 3), (0, 6))
         # print(occupancy_grid.grid)
-        with final_plot.get_lock():
-            final_plot[:] = plot.flatten()[:]
-        with final_display.get_lock():
-            final_display[:] = display.flatten()[:]
+        memoryview(final_plot).cast("B")[:] = plot.flatten()[:]
+        memoryview(final_display).cast("B")[:] = display.flatten()[:]
 
 
 # -----------------------------------------------------------
@@ -377,8 +376,7 @@ def kinect_process(real_world_pos, real_rotation, ready, final_occupancy):
         final_occupancies = (
             (occupancy_grid.grid - occupancy_grid.min_treshold) / occupancy_range * 255
         ).astype(np.uint8)
-        with final_occupancy.get_lock():
-            final_occupancy[:] = final_occupancies.flatten()[:]
+        memoryview(final_occupancy).cast("B")[:] = final_occupancies.flatten()[:]
 
 
 # -----------------------------------------------------------
@@ -390,9 +388,9 @@ class GlobalData:
         self.real_world_pos = manager.list([0, 0, 0])
         self.real_rotation = manager.Value("d", 0.0)
         self.ready = manager.Value(ctypes.c_bool, False)
-        self.final_plot = Array(ctypes.c_int8, 480 * 640 * 3)
-        self.final_display = Array(ctypes.c_int8, 720 * 1280 * 3)
-        self.final_occupancy = Array(ctypes.c_int8, 40 * 40)
+        self.final_plot = RawArray(ctypes.c_int8, 480 * 640 * 3)
+        self.final_display = RawArray(ctypes.c_int8, 720 * 1280 * 3)
+        self.final_occupancy = RawArray(ctypes.c_int8, 40 * 40)
         self.despoint = manager.list([0, 0])
         self.startpoint = manager.list([0, 0])
         t1 = Process(
@@ -426,28 +424,19 @@ class GlobalData:
         return self.real_rotation.value
 
     def getPlot(self):
-        with self.final_plot.get_lock():  # synchronize access
-            arr = np.frombuffer(
-                self.final_plot.get_obj(), dtype=np.uint8
-            )  # no data copying
-            arr = arr.reshape((480, 640, 3))
-            return arr
+        arr = np.frombuffer(self.final_plot, dtype=np.uint8)  # no data copying
+        arr = arr.reshape((480, 640, 3))
+        return arr
 
     def getDisplay(self):
-        with self.final_display.get_lock():  # synchronize access
-            arr = np.frombuffer(
-                self.final_display.get_obj(), dtype=np.uint8
-            )  # no data copying
-            arr = arr.reshape((720, 1280, 3))
-            return arr
+        arr = np.frombuffer(self.final_display, dtype=np.uint8)  # no data copying
+        arr = arr.reshape((720, 1280, 3))
+        return arr
 
     def getOccupancy(self):
-        with self.final_occupancy.get_lock():  # synchronize access
-            arr = np.frombuffer(
-                self.final_occupancy.get_obj(), dtype=np.uint8
-            )  # no data copying
-            arr = arr.reshape((40, 40))
-            return arr
+        arr = np.frombuffer(self.final_occupancy, dtype=np.uint8)  # no data copying
+        arr = arr.reshape((40, 40))
+        return arr
 
     def setTarget(self, dest):
         self.despoint[0] = dest[0]
