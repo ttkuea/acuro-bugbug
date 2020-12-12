@@ -77,7 +77,8 @@ if __name__ == "__main__":
     shape = (10, 10)
     resolution = 1
     occupancy_grid = OccupancyGrid(shape=shape, resolution=resolution)
-    for x, y in [(x, np.sqrt(25 - x ** 2)) for x in range(6)]:
-        print(x, y)
-        occupancy_grid.updateOccupy((0, 0), (x, y))
+    # for x, y in [(x, np.sqrt(25 - x ** 2)) for x in range(6)]:
+        # print(x, y)
+    for _ in range(10):
+        occupancy_grid.updateOccupy((0, 0), (10, 10))
     print(occupancy_grid.grid)
