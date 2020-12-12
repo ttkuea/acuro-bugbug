@@ -10,7 +10,6 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 import yaml
-from flask import Flask, jsonify
 
 from robot.robot import Robot
 
@@ -130,7 +129,6 @@ def positionProcess(
     # min_coordinate = resolution * 20
 
     while True:
-        print("a1")
         # world plot
         plot = np.zeros((480, 640, 3), np.uint8)
         plot = draw_grid(plot)
