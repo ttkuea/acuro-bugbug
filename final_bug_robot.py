@@ -72,6 +72,8 @@ def stateAction(robot):
             sta.setStart(init_pos)
             state = 1
             print("Set initial position: %f,%f" % (init_pos[0], init_pos[1]))
+        elif tg == ord("l"):
+            check_occ()
 
     if state == 1:  # align target
         robot.drivedirect(rot_spd, -rot_spd)
@@ -131,7 +133,7 @@ def stateTransition(robot):
 
 
     elif state == 2:  # move forward -> follow wall, finish
-        if robot.data.bumperL == 1 or robot.data.bumperR == 1:
+        if robot.data.bumperL == 1 or robot.data.bumperR == 1 or check_occ():
         # if robot.data.wallSignal > 25:
             state = 3
             substate_orient = orient
@@ -142,6 +144,11 @@ def stateTransition(robot):
         if (pos[0]*100 - dest[0]*100) ** 2 + (pos[1]*100 - dest[1]*100) ** 2 <= treshold ** 2:
             print('2 at target')
             state = 4
+        
+        # if check_occ():
+        #     state = 3
+        #     substate_orient = orient
+
 
     elif state == 3:  # follow wall -> align target
         if (pos[0]*100 - dest[0]*100) ** 2 + (pos[1]*100 - dest[1]*100) ** 2 <= treshold ** 2:
@@ -158,7 +165,7 @@ def stateTransition(robot):
             substate = 1
         elif substate == 1:
             # if robot.data.wallSignal > 25:
-            if robot.data.bumperL == 1 or robot.data.bumperR == 1:
+            if robot.data.bumperL == 1 or robot.data.bumperR == 1 or check_occ():
                 mline_counter += 1
                 substate = 2
         elif substate == 2:
@@ -215,10 +222,41 @@ def real_orient(orient):
     print(real_o)
     return real_o
 
+def check_occ():
+    # Kinect
+    resolution = 0.1525
+    # occupancy_grid.min_treshold = -50
+    # occupancy_grid.max_treshold = 50
+    min_coordinate = resolution * 20
+    treshold = 200
+
+    occ_grid = sta.getOccupancy()
+    print(occ_grid)
+    real_world_pos = sta.getPosition()
+    
+    robot_x = (real_world_pos[0] + min_coordinate) // resolution
+    robot_y = (real_world_pos[1] + min_coordinate) // resolution
+
+    # print(robot_x, robot_y)
+    if 0 < robot_x < 39 and 0 < robot_y < 39:
+        for i in range(-1,2):
+            for j in range(-1,2):
+                if i != 1 and j != 1:
+                    if occ_grid[int(robot_y - j), int(robot_x - i)] > treshold:
+                        return True
+        return False
+    
+
+
+
 
 # --------------------------------------------------
 # Main loop
 # --------------------------------------------------
+cv2.namedWindow("Plot", cv2.WINDOW_NORMAL)
+cv2.namedWindow("Display", cv2.WINDOW_NORMAL)
+cv2.namedWindow("Occupancy", cv2.WINDOW_NORMAL)
+count = 0
 while is_running:
     # TODO: get new pos
     pos = [sta.getPosition()[0], sta.getPosition()[1]]
@@ -233,6 +271,11 @@ while is_running:
 
     cv2.imshow("Plot", sta.getPlot())
     cv2.imshow("Display", sta.getDisplay())
+    cv2.imshow("Occupancy", sta.getOccupancy())
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
-robot.drivedirect(0,0)
+    count += 1
+    if count % 50 == 0:
+        print(pos)
+robot.drivedirect(0, 0)
+
